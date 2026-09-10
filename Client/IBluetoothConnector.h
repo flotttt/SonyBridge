@@ -18,7 +18,7 @@ struct BluetoothDevice
 };
 
 /*
-General notes: Please look at the implementation of WindowsBluetoothConnector.
+General notes: Please look at the implementation of MacOSBluetoothConnector.
 * Functions should throw RecoverableExceptions if they're indeed recoverable, and throw std::runtime_error otherwise.
 * RecoverableException can force a disconnection of the socket with an additional param (a call to disconnect()).
 * connect() should try the v1 service UUID (SONY_UUID) first and fall back to the v2 UUID (SONY_UUID_V2)

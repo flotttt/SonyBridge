@@ -14,7 +14,6 @@
 		A8DC78EC2576923D00447738 /* MacOSBluetoothConnector.mm in Sources */ = {isa = PBXBuildFile; fileRef = A8DC78E82576923D00447738 /* MacOSBluetoothConnector.mm */; };
 		A8DC78F12576952E00447738 /* BluetoothWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A8DC78EF2576952E00447738 /* BluetoothWrapper.cpp */; };
 		A8DC78F52576953600447738 /* CommandSerializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A8DC78F32576953600447738 /* CommandSerializer.cpp */; };
-		A8DC78FA2576954100447738 /* TimedMessageQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A8DC78F92576954100447738 /* TimedMessageQueue.cpp */; };
 		A8DC78FF2576967D00447738 /* ByteMagic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A8DC78FD2576967D00447738 /* ByteMagic.cpp */; };
 		A8DC790525769A6600447738 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A8DC790425769A6600447738 /* IOBluetooth.framework */; };
 		A8DC792C25769C9900447738 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = A8DC792825769C9900447738 /* AppDelegate.mm */; };
@@ -44,9 +43,6 @@
 		A8DC78F02576952E00447738 /* BluetoothWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothWrapper.h; path = ../BluetoothWrapper.h; sourceTree = "<group>"; };
 		A8DC78F32576953600447738 /* CommandSerializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandSerializer.cpp; path = ../CommandSerializer.cpp; sourceTree = "<group>"; };
 		A8DC78F42576953600447738 /* CommandSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandSerializer.h; path = ../CommandSerializer.h; sourceTree = "<group>"; };
-		A8DC78F72576954100447738 /* TimedMessageQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TimedMessageQueue.h; path = ../TimedMessageQueue.h; sourceTree = "<group>"; };
-		A8DC78F82576954100447738 /* SingleInstanceFuture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SingleInstanceFuture.h; path = ../SingleInstanceFuture.h; sourceTree = "<group>"; };
-		A8DC78F92576954100447738 /* TimedMessageQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TimedMessageQueue.cpp; path = ../TimedMessageQueue.cpp; sourceTree = "<group>"; };
 		A8DC78FD2576967D00447738 /* ByteMagic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ByteMagic.cpp; path = ../ByteMagic.cpp; sourceTree = "<group>"; };
 		A8DC78FE2576967D00447738 /* ByteMagic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ByteMagic.h; path = ../ByteMagic.h; sourceTree = "<group>"; };
 		A8DC790425769A6600447738 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
@@ -92,9 +88,6 @@
 				A8DC78F02576952E00447738 /* BluetoothWrapper.h */,
 				A8DC78F32576953600447738 /* CommandSerializer.cpp */,
 				A8DC78F42576953600447738 /* CommandSerializer.h */,
-				A8DC78F82576954100447738 /* SingleInstanceFuture.h */,
-				A8DC78F92576954100447738 /* TimedMessageQueue.cpp */,
-				A8DC78F72576954100447738 /* TimedMessageQueue.h */,
 				A8DC78FD2576967D00447738 /* ByteMagic.cpp */,
 				A8DC78FE2576967D00447738 /* ByteMagic.h */,
 				A8A3D31D283EC38600148E80 /* Headphones.cpp */,
@@ -196,7 +189,6 @@
 				A8DC78EC2576923D00447738 /* MacOSBluetoothConnector.mm in Sources */,
 				A8DC792D25769C9900447738 /* ViewController.mm in Sources */,
 				A8DC78F12576952E00447738 /* BluetoothWrapper.cpp in Sources */,
-				A8DC78FA2576954100447738 /* TimedMessageQueue.cpp in Sources */,
 				A8DC78F52576953600447738 /* CommandSerializer.cpp in Sources */,
 				A8DC78FF2576967D00447738 /* ByteMagic.cpp in Sources */,
 				A8DC792C25769C9900447738 /* AppDelegate.mm in Sources */,

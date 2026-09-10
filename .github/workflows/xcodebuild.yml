@@ -3,10 +3,10 @@ name: macOS
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
 
 jobs:
   build:
@@ -20,9 +20,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
+    - uses: actions/checkout@v4
 
     - name: Create build directory
       working-directory: ${{github.workspace}}/Client
@@ -44,7 +42,7 @@ jobs:
       run: zip -r SonyHeadphonesClient.zip SonyHeadphonesClient.app
 
     - name: Upload the zipped application
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         # Artifact name
         name: ${{ matrix.artifact_name }}

@@ -30,9 +30,5 @@
   <g font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="19" font-weight="600" fill="#c7d0dc">
     <rect x="212" y="236" width="118" height="40" rx="20" fill="#ffffff" fill-opacity="0.06"/>
     <text x="271" y="262" text-anchor="middle">macOS</text>
-    <rect x="342" y="236" width="132" height="40" rx="20" fill="#ffffff" fill-opacity="0.06"/>
-    <text x="408" y="262" text-anchor="middle">Windows</text>
-    <rect x="486" y="236" width="104" height="40" rx="20" fill="#ffffff" fill-opacity="0.06"/>
-    <text x="538" y="262" text-anchor="middle">Linux</text>
   </g>
 </svg>

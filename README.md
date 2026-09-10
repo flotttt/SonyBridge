@@ -8,17 +8,16 @@
 
 <br/>
 
-[![Build](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/cmake.yml/badge.svg)](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/cmake.yml)
+[![Build](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/xcodebuild.yml/badge.svg)](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/xcodebuild.yml)
 [![Release](https://img.shields.io/github/v/release/AmitRajput-Dev/SonyBridge?include_prereleases&sort=semver)](https://github.com/AmitRajput-Dev/SonyBridge/releases)
 [![Downloads](https://img.shields.io/github/downloads/AmitRajput-Dev/SonyBridge/total?color=success)](https://github.com/AmitRajput-Dev/SonyBridge/releases)
 [![Stars](https://img.shields.io/github/stars/AmitRajput-Dev/SonyBridge?style=flat)](https://github.com/AmitRajput-Dev/SonyBridge/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
+![Platforms](https://img.shields.io/badge/platform-macOS-blue)
 
 <br/>
 
 [![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/AmitRajput-Dev/SonyBridge/releases/latest)
-[![Windows Beta](https://img.shields.io/badge/Windows-Beta-0078D6?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/AmitRajput-Dev/SonyBridge/releases/tag/v0.4.0-beta1)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/AmitRajput-Dev)
 [![Donate via Razorpay](https://img.shields.io/badge/Donate-Razorpay-3395FF?style=for-the-badge&logo=razorpay&logoColor=white)](https://razorpay.me/@amitpratapsingrajput)
 
@@ -44,8 +43,8 @@ reverse-engineered binary protocol — no phone required.
 
 The original [SonyHeadphonesClient](https://github.com/Plutoberth/SonyHeadphonesClient) only spoke Sony's
 **first-generation** protocol, so newer headsets (WH-CH720N, XM4/XM5, WF-series, LinkBuds…) just timed
-out on connect. SonyBridge adds full **second-generation ("v2") protocol** support, a native SwiftUI app
-on macOS, and a matching modern UI on Windows/Linux.
+out on connect. SonyBridge adds full **second-generation ("v2") protocol** support and a native SwiftUI
+app for macOS.
 
 ## ✨ Features
 
@@ -60,7 +59,7 @@ on macOS, and a matching modern UI on Windows/Linux.
 - 🔄 **Live button sync** — changes made on the headset reflect in the app
 - 🔌 **Auto-connect** to your already-paired Sony headset
 - 🧬 **Dual-protocol** — auto-detects and speaks either protocol generation
-- 🌑 **Modern UI** — dark, minimal, shaped after Sony's own app (SwiftUI on macOS, Dear ImGui on Windows/Linux)
+- 🌑 **Modern UI** — dark, minimal, shaped after Sony's own app, in native SwiftUI
 
 ## 📥 Download
 
@@ -79,27 +78,9 @@ or [**Download .app**](https://github.com/AmitRajput-Dev/SonyBridge/releases/lat
 </td>
 <td>macOS 11+ · Apple Silicon &amp; Intel</td>
 </tr>
-<tr>
-<td><b>Windows</b></td>
-<td>
-
-[**Download Beta**](https://github.com/AmitRajput-Dev/SonyBridge/releases/tag/v0.4.0-beta1)
-
-</td>
-<td>🧪 Beta — testers wanted</td>
-</tr>
-<tr>
-<td><b>Linux</b></td>
-<td>
-
-[Build from source](#-build-from-source)
-
-</td>
-<td>GLFW/OpenGL build</td>
-</tr>
 </table>
 
-> 💡 After launching, **connect your headphones in your OS Bluetooth settings first**, then open SonyBridge and hit *Connect*. Keep audio playing — Sony headsets drop the control link when idle to save power.
+> 💡 After launching, **connect your headphones in your macOS Bluetooth settings first**, then open SonyBridge and hit *Connect*. Keep audio playing — Sony headsets drop the control link when idle to save power.
 
 <details>
 <summary><b>macOS install notes (Gatekeeper)</b></summary>
@@ -135,29 +116,11 @@ first time (`brew trust AmitRajput-Dev/tap`).
 Requires **Xcode 14+**.
 
 ```sh
-git clone --recurse-submodules https://github.com/AmitRajput-Dev/SonyBridge.git
+git clone https://github.com/AmitRajput-Dev/SonyBridge.git
 open SonyBridge/Client/macos/SonyHeadphonesClient.xcodeproj
 ```
 
 Then ⌘R.
-</details>
-
-<details>
-<summary><b>Windows / Linux (Dear ImGui UI)</b></summary>
-
-**Windows** (CMake + MSVC, from a Developer Command Prompt):
-```sh
-cd Client && mkdir build && cd build
-cmake .. && cmake --build . --config Release
-```
-
-**Linux** (`sudo apt install libbluetooth-dev libglfw3-dev libdbus-1-dev`):
-```sh
-cd Client && mkdir build && cd build
-cmake .. && cmake --build .
-```
-
-Keep the built binary next to its `resources/` folder (device hero images load from `resources/devices/`).
 </details>
 
 ## 🔬 How it works
@@ -184,7 +147,7 @@ Contributions are very welcome — especially **device reports** and **testing o
 
 - 🐛 **Found a bug / have a device to report?** [Open an issue](https://github.com/AmitRajput-Dev/SonyBridge/issues/new) with your model and what happened.
 - 🧪 **Want to test?** Grab a [release](https://github.com/AmitRajput-Dev/SonyBridge/releases) and tell us how it behaves on your headset (a screenshot helps a lot).
-- 🔧 **Code?** Fork, branch, and open a PR against `main`. CI builds macOS, Windows and Linux on every PR.
+- 🔧 **Code?** Fork, branch, and open a PR against `main`. CI builds the macOS app on every PR.
 
 ## 🙏 Credits
 
