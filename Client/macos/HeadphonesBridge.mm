@@ -247,6 +247,16 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
     });
 }
 
+- (void)refreshBatteryWithCompletion:(void (^)(void))completion {
+    // CRITICAL: 0x22 is BATTERY_LEVEL_REQUEST on v2 but POWER_OFF on v1 - never send it to a v1 device.
+    if (!_hp || !self.connected || _bt->getProtocolVersion() != SonyProtocolVersion::V2) { completion(); return; }
+    Headphones *hp = _hp.get();
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        try { hp->requestBattery(); } catch (std::exception &exc) {}
+        dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
+    });
+}
+
 - (void)setEqualizerPreset:(NSInteger)preset completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected) {
         completion(NO, NSLocalizedString(@"Not connected.", nil));

@@ -93,6 +93,9 @@ typedef NS_ENUM(NSInteger, SHCAmbientMode) {
 // own button show up in the app. Called on a timer while connected.
 - (void)refreshDynamicWithCompletion:(void (^)(void))completion;
 
+// Re-reads the battery level (v2 devices only). Completion on the main thread.
+- (void)refreshBatteryWithCompletion:(void (^)(void))completion;
+
 @end
 
 NS_ASSUME_NONNULL_END

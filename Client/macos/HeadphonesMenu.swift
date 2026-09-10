@@ -53,8 +53,8 @@ final class HeadphonesMenu {
             item.state = connected && model.mode == mode ? .on : .off
             item.isEnabled = connected
         }
-        connectItem.title = connected ? tr("Disconnect") : (model.connecting ? tr("Connecting…") : tr("Connect…"))
-        connectItem.isEnabled = !model.connecting
+        connectItem.title = connected ? tr("Disconnect") : (model.connectionState == .connecting ? tr("Connecting…") : tr("Connect…"))
+        connectItem.isEnabled = model.connectionState != .connecting
     }
 
     private func toggleConnection() {

@@ -12,7 +12,6 @@
 "%ld%%" = "%ld %%";
 
 /* Errors (HeadphonesBridge.mm, HeadphonesModel.swift) */
-"Headphones disconnected." = "Casque déconnecté.";
 "No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first." = "Aucun casque Sony connecté. Connectez d’abord votre casque dans les réglages Bluetooth de macOS.";
 "Connection timed out." = "Délai de connexion dépassé.";
 "Not connected." = "Non connecté.";

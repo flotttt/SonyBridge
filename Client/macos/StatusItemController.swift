@@ -13,9 +13,9 @@ final class StatusItemController {
         let image = NSImage(systemSymbolName: "headphones", accessibilityDescription: "SonyBridge")
         image?.isTemplate = true
         statusItem.button?.image = image
-        model.$connected
+        model.$connectionState
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] connected in self?.statusItem.button?.appearsDisabled = !connected }
+            .sink { [weak self] state in self?.statusItem.button?.appearsDisabled = state != .connected }
             .store(in: &cancellables)
     }
 }
