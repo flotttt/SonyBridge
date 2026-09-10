@@ -172,7 +172,7 @@ final class HeadphonesModel: ObservableObject {
             if self.connected && !self.bridge.connected {
                 self.connected = false
                 self.deviceName = ""
-                self.errorMessage = "Headphones disconnected."
+                self.errorMessage = NSLocalizedString("Headphones disconnected.", comment: "")
                 self.stopWatchingConnection()
                 self.stopDynamicPolling()
             }

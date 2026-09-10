@@ -153,7 +153,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
     }
 
     if (!device) {
-        completion(NO, @"No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first.");
+        completion(NO, NSLocalizedString(@"No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first.", nil));
         return;
     }
 
@@ -174,7 +174,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 
     if (!_bt->isConnected()) {
         _bt->disconnect();
-        completion(NO, @"Connection timed out.");
+        completion(NO, NSLocalizedString(@"Connection timed out.", nil));
         return;
     }
 
@@ -241,12 +241,12 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 
 - (void)setEqualizerPreset:(NSInteger)preset completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected) {
-        completion(NO, @"Not connected.");
+        completion(NO, NSLocalizedString(@"Not connected.", nil));
         return;
     }
     // The v2 EQ SET opcode differs from v1; only issue it on confirmed v2 devices.
     if (_bt->getProtocolVersion() != SonyProtocolVersion::V2) {
-        completion(NO, @"Equalizer control isn't supported on this device yet.");
+        completion(NO, NSLocalizedString(@"Equalizer control isn't supported on this device yet.", nil));
         return;
     }
     Headphones *hp = _hp.get();
@@ -267,7 +267,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 
 - (void)setCustomEqualizerBass:(NSInteger)bass bands:(NSArray<NSNumber *> *)bands completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected || _bt->getProtocolVersion() != SonyProtocolVersion::V2) {
-        completion(NO, @"Equalizer control isn't supported on this device yet.");
+        completion(NO, NSLocalizedString(@"Equalizer control isn't supported on this device yet.", nil));
         return;
     }
     std::vector<int> cbands;
@@ -285,7 +285,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 
 - (void)setDsee:(BOOL)enabled completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected || _bt->getProtocolVersion() != SonyProtocolVersion::V2) {
-        completion(NO, @"Not supported on this device.");
+        completion(NO, NSLocalizedString(@"Not supported on this device.", nil));
         return;
     }
     Headphones *hp = _hp.get();
@@ -303,7 +303,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
        focusVoice:(BOOL)focusVoice
        completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected) {
-        completion(NO, @"Not connected.");
+        completion(NO, NSLocalizedString(@"Not connected.", nil));
         return;
     }
 
@@ -343,7 +343,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 }
 
 - (void)setAutoPowerOff:(NSInteger)index completion:(void (^)(BOOL, NSString * _Nullable))completion {
-    if (!_hp || !self.connected) { completion(NO, @"Not connected."); return; }
+    if (!_hp || !self.connected) { completion(NO, NSLocalizedString(@"Not connected.", nil)); return; }
     Headphones *hp = _hp.get();
     dispatch_async(_cmdQueue, ^{
         NSString *error = nil; BOOL ok = YES;
@@ -353,7 +353,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 }
 
 - (void)setSpeakToChat:(BOOL)enabled completion:(void (^)(BOOL, NSString * _Nullable))completion {
-    if (!_hp || !self.connected) { completion(NO, @"Not connected."); return; }
+    if (!_hp || !self.connected) { completion(NO, NSLocalizedString(@"Not connected.", nil)); return; }
     Headphones *hp = _hp.get();
     dispatch_async(_cmdQueue, ^{
         NSString *error = nil; BOOL ok = YES;
@@ -363,7 +363,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 }
 
 - (void)setAdaptiveVolume:(BOOL)enabled completion:(void (^)(BOOL, NSString * _Nullable))completion {
-    if (!_hp || !self.connected) { completion(NO, @"Not connected."); return; }
+    if (!_hp || !self.connected) { completion(NO, NSLocalizedString(@"Not connected.", nil)); return; }
     Headphones *hp = _hp.get();
     dispatch_async(_cmdQueue, ^{
         NSString *error = nil; BOOL ok = YES;
