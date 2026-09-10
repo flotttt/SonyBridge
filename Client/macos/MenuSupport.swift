@@ -47,3 +47,17 @@ func hostingMenuItem<Content: View>(width: CGFloat = MenuMetrics.width, @ViewBui
     item.view = host
     return item
 }
+
+// "Title        value": the value right-aligned in the secondary color, like "Égaliseur        Graves ›".
+func titleWithValue(_ title: String, _ value: String, width: CGFloat = MenuMetrics.width - 60) -> NSAttributedString {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.tabStops = [NSTextTab(textAlignment: .right, location: width)]
+    let font = NSFont.menuFont(ofSize: 0)
+    let text = NSMutableAttributedString(string: title, attributes: [.font: font, .paragraphStyle: paragraph])
+    if !value.isEmpty {
+        text.append(NSAttributedString(string: "\t" + value, attributes: [
+            .font: font, .paragraphStyle: paragraph, .foregroundColor: NSColor.secondaryLabelColor,
+        ]))
+    }
+    return text
+}

@@ -1,7 +1,7 @@
 import AppKit
 import Combine
 
-// Owns the menu bar icon and attaches the headphones menu to it.
+// Owns the menu bar icon (it follows the mode and connection state) and attaches the headphones menu to it.
 final class StatusItemController {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let headphonesMenu: HeadphonesMenu
@@ -10,12 +10,13 @@ final class StatusItemController {
     init(model: HeadphonesModel) {
         headphonesMenu = HeadphonesMenu(model: model)
         statusItem.menu = headphonesMenu.menu
-        let image = NSImage(systemSymbolName: "headphones", accessibilityDescription: "SonyBridge")
-        image?.isTemplate = true
-        statusItem.button?.image = image
-        model.$connectionState
+        model.$connectionState.combineLatest(model.$mode)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] state in self?.statusItem.button?.appearsDisabled = state != .connected }
+            .sink { [weak self] state, mode in
+                let connected = state == .connected
+                self?.statusItem.button?.image = StatusIcon.image(connected: connected, mode: mode)
+                self?.statusItem.button?.appearsDisabled = !connected
+            }
             .store(in: &cancellables)
     }
 }

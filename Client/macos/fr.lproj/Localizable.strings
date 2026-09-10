@@ -16,6 +16,33 @@
 "Case %ld%%" = "Boîtier %ld %%";
 "Clear Bass" = "Clear Bass";
 "Focus on Voice" = "Focalisation sur la voix";
+"Equalizer" = "Égaliseur";
+"Bright" = "Brillant";
+"Excited" = "Dynamique";
+"Mellow" = "Doux";
+"Relaxed" = "Détendu";
+"Vocal" = "Voix";
+"Treble" = "Aigus";
+"Bass" = "Graves";
+"Speech" = "Parole";
+"Manual" = "Manuel";
+"Custom" = "Personnalisé";
+"Manual equalizer coming soon for this model" = "Égaliseur manuel bientôt disponible pour ce modèle";
+"Reset" = "Réinitialiser";
+"DSEE" = "DSEE";
+"Speak-to-Chat" = "Speak-to-Chat";
+"Adaptive Volume" = "Volume adaptatif";
+"Auto Power-Off" = "Arrêt automatique";
+"5 min" = "5 min";
+"30 min" = "30 min";
+"1 hour" = "1 heure";
+"3 hours" = "3 heures";
+"When taken off" = "Quand le casque est retiré";
+"About the Headphones" = "À propos du casque";
+"Firmware" = "Firmware";
+"Codec" = "Codec";
+"Protocol" = "Protocole";
+"Bluetooth" = "Bluetooth";
 
 /* Errors (HeadphonesBridge.mm, HeadphonesModel.swift) */
 "No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first." = "Aucun casque Sony connecté. Connectez d’abord votre casque dans les réglages Bluetooth de macOS.";
