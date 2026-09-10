@@ -14,6 +14,11 @@ private enum Theme {
     static let secondary = Color(white: 0.62)
 }
 
+// Looks up a UI string in Localizable.strings (for text built at runtime, which SwiftUI doesn't localize itself).
+private func tr(_ key: String) -> String {
+    NSLocalizedString(key, comment: "")
+}
+
 @available(macOS 11.0, *)
 struct ContentView: View {
     @StateObject private var model = HeadphonesModel()
@@ -50,7 +55,7 @@ struct ContentView: View {
                     .padding(.horizontal, 32)
             }
             Button(action: model.connect) {
-                Text(model.connecting ? "Connecting…" : "Connect headphones")
+                Text(model.connecting ? LocalizedStringKey("Connecting…") : LocalizedStringKey("Connect headphones"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -152,7 +157,7 @@ struct ContentView: View {
                     Image(systemName: "battery.100")
                         .font(.system(size: 13))
                         .foregroundColor(Theme.accent)
-                    Text("L \(model.batteryLeft)%  R \(model.batteryRight)%")
+                    Text(String(format: tr("L %ld%%  R %ld%%"), model.batteryLeft, model.batteryRight))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(Theme.secondary)
                 } else if model.batteryLevel >= 0 {
@@ -196,7 +201,7 @@ struct ContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func modeButton(_ mode: SHCAmbientMode, _ symbol: String, _ label: String) -> some View {
+    private func modeButton(_ mode: SHCAmbientMode, _ symbol: String, _ label: LocalizedStringKey) -> some View {
         let selected = model.mode == mode
         return Button(action: { model.setMode(mode) }) {
             VStack(spacing: 8) {
@@ -297,7 +302,7 @@ struct ContentView: View {
 
     private func eqBandRow(_ label: String, value: Binding<Double>, display: Int, accent: Bool = false) -> some View {
         HStack(spacing: 10) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(accent ? Theme.accent : Theme.secondary)
                 .frame(width: 34, alignment: .leading)
@@ -326,7 +331,7 @@ struct ContentView: View {
     private func eqChip(_ name: String, _ code: Int) -> some View {
         let selected = model.eqPreset == code
         return Button(action: { model.setEqualizer(code) }) {
-            Text(name)
+            Text(LocalizedStringKey(name))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(selected ? .white : Theme.secondary)
                 .frame(maxWidth: .infinity)
@@ -363,7 +368,7 @@ struct ContentView: View {
                         get: { model.autoPowerOff },
                         set: { model.setAutoPowerOff($0) }
                     )) {
-                        ForEach(0..<apoOptions.count, id: \.self) { i in Text(apoOptions[i]).tag(i) }
+                        ForEach(0..<apoOptions.count, id: \.self) { i in Text(LocalizedStringKey(apoOptions[i])).tag(i) }
                     }
                     .pickerStyle(MenuPickerStyle())
                     .frame(width: 130)
@@ -377,7 +382,7 @@ struct ContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func settingToggle(_ title: String, _ subtitle: String, on: Bool, action: @escaping (Bool) -> Void) -> some View {
+    private func settingToggle(_ title: LocalizedStringKey, _ subtitle: LocalizedStringKey, on: Bool, action: @escaping (Bool) -> Void) -> some View {
         Toggle(isOn: Binding(get: { on }, set: { action($0) })) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
@@ -394,12 +399,14 @@ struct ContentView: View {
                 .font(.system(size: 15, weight: .bold))
                 .foregroundColor(.white)
                 .padding(.bottom, 10)
-            aboutRow("Status", model.connected ? "Connected" : "Disconnected")
+            aboutRow("Status", tr(model.connected ? "Connected" : "Disconnected"))
             if model.hasDualBattery {
                 aboutRow("Battery L / R", "\(model.batteryLeft)% / \(model.batteryRight)%")
                 if model.batteryCase >= 0 { aboutRow("Case", "\(model.batteryCase)%") }
             } else if model.batteryLevel >= 0 {
-                aboutRow("Battery", "\(model.batteryLevel)%\(model.batteryCharging ? " (charging)" : "")")
+                aboutRow("Battery", model.batteryCharging
+                         ? String(format: tr("%ld%% (charging)"), model.batteryLevel)
+                         : "\(model.batteryLevel)%")
             }
             if !model.codec.isEmpty { aboutRow("Codec", model.codec) }
             if !model.firmware.isEmpty { aboutRow("Firmware", model.firmware) }
@@ -415,7 +422,7 @@ struct ContentView: View {
         .background(Theme.card)
     }
 
-    private func aboutRow(_ label: String, _ value: String) -> some View {
+    private func aboutRow(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.system(size: 12)).foregroundColor(Theme.secondary)
             Spacer()

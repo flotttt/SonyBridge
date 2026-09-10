@@ -1,0 +1,62 @@
+/* SonyBridge — French UI strings. Keys are the English source strings; missing keys fall back to English. */
+
+/* Connection */
+"No headphones connected" = "Aucun casque connecté";
+"Connecting…" = "Connexion…";
+"Connect headphones" = "Connecter le casque";
+"Connected" = "Connecté";
+"Disconnected" = "Déconnecté";
+
+/* Battery (L/R = left/right earbud) */
+"L %ld%%  R %ld%%" = "G %ld %%  D %ld %%";
+"%ld%% (charging)" = "%ld %% (en charge)";
+
+/* Ambient sound control */
+"Ambient Sound Control" = "Contrôle du son ambiant";
+"Noise\nCanceling" = "Réduction\nde bruit";
+"Ambient\nSound" = "Son\nambiant";
+"Off" = "Désactivé";
+"Ambient Sound Level" = "Niveau du son ambiant";
+"Focus on Voice" = "Focalisation sur la voix";
+
+/* Equalizer */
+"Equalizer" = "Égaliseur";
+"Bright" = "Brillant";
+"Excited" = "Dynamique";
+"Mellow" = "Doux";
+"Relaxed" = "Détendu";
+"Vocal" = "Voix";
+"Treble" = "Aigus";
+"Bass" = "Graves";
+"Speech" = "Parole";
+"Manual" = "Manuel";
+
+/* DSEE */
+"Upscale compressed audio" = "Améliore l’audio compressé";
+
+/* Settings */
+"Settings" = "Réglages";
+"Adaptive Volume" = "Volume adaptatif";
+"Auto-adjust volume by surroundings" = "Ajuste le volume selon l’environnement";
+"Pause music when you talk" = "Met la musique en pause quand vous parlez";
+"Auto Power-Off" = "Arrêt automatique";
+"Turn off when idle" = "S’éteint en cas d’inactivité";
+"1 hour" = "1 heure";
+"3 hours" = "3 heures";
+"When taken off" = "Quand le casque est retiré";
+
+/* About popover */
+"Status" = "État";
+"Battery" = "Batterie";
+"Battery L / R" = "Batterie G / D";
+"Case" = "Boîtier";
+"Protocol" = "Protocole";
+"SonyBridge · not affiliated with Sony" = "SonyBridge · non affilié à Sony";
+
+/* Errors */
+"Headphones disconnected." = "Casque déconnecté.";
+"No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first." = "Aucun casque Sony connecté. Connectez d’abord votre casque dans les réglages Bluetooth de macOS.";
+"Connection timed out." = "Délai de connexion dépassé.";
+"Not connected." = "Non connecté.";
+"Equalizer control isn't supported on this device yet." = "Le réglage de l’égaliseur n’est pas encore pris en charge sur cet appareil.";
+"Not supported on this device." = "Non pris en charge sur cet appareil.";

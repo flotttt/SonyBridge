@@ -1,0 +1,2 @@
+/* Localized Info.plist values (English). Keeps an en.lproj in the bundle so non-French systems fall back to English. */
+"NSBluetoothAlwaysUsageDescription" = "This app uses Bluetooth in order to connect to your headphones.";
