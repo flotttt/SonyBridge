@@ -103,6 +103,11 @@
     return _hp ? _hp->getClearBass() : 0;
 }
 
+- (NSInteger)equalizerBandCount { return _hp ? _hp->getEqualizerBandCount() : 0; }
+- (BOOL)equalizerHasClearBass { return _hp && _hp->equalizerHasClearBass(); }
+// Only the 5-band + Clear Bass layout (WH-CH720N family) has a verified write format.
+- (BOOL)equalizerWritable { return self.supportsEqualizer && _hp && _hp->equalizerHasClearBass(); }
+
 - (BOOL)dsee {
     return _hp ? _hp->getDsee() : NO;
 }
@@ -213,6 +218,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
         try {
             if (!self->_initialized) {
                 hp->initDevice();
+                hp->probeNcAsmInquiryType();
                 self->_initialized = YES;
             }
             hp->requestBattery();
@@ -245,7 +251,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
         return;
     }
     // The v2 EQ SET opcode differs from v1; only issue it on confirmed v2 devices.
-    if (_bt->getProtocolVersion() != SonyProtocolVersion::V2) {
+    if (!self.equalizerWritable) {
         completion(NO, NSLocalizedString(@"Equalizer control isn't supported on this device yet.", nil));
         return;
     }
@@ -266,7 +272,7 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 }
 
 - (void)setCustomEqualizerBass:(NSInteger)bass bands:(NSArray<NSNumber *> *)bands completion:(void (^)(BOOL, NSString * _Nullable))completion {
-    if (!_hp || !self.connected || _bt->getProtocolVersion() != SonyProtocolVersion::V2) {
+    if (!_hp || !self.connected || !self.equalizerWritable) {
         completion(NO, NSLocalizedString(@"Equalizer control isn't supported on this device yet.", nil));
         return;
     }

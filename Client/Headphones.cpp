@@ -1,5 +1,6 @@
 #include "Headphones.h"
 #include "CommandSerializer.h"
+#include "ProtocolParsers.h"
 
 #include <stdexcept>
 #include <utility>
@@ -136,26 +137,23 @@ int Headphones::getBatteryCase() { return this->_batteryCase; }
 
 void Headphones::requestEqualizer()
 {
-	// GET: 56 00  ->  RET: 57 00 <preset> 06 <bass+10> <b1..b5 +10>
-	auto resp = this->_conn.sendCommandAndReadResponse(
-		{ (char)V2Command::EQ_GET, 0x00 },
-		V2Command::EQ_RET
-	);
-	if (resp.size() >= 3)
+	// GET: 56 00 -> RET: 57 00 <preset> <count> <values...> (decoded by ProtocolParsers::parseEqualizer)
+	auto resp = this->_conn.sendCommandAndReadResponse({ (char)V2Command::EQ_GET, 0x00 }, V2Command::EQ_RET);
+	if (auto eq = ProtocolParsers::parseEqualizer(resp))
 	{
 		std::lock_guard guard(this->_propertyMtx);
-		this->_eqPreset = static_cast<EQ_PRESET>((unsigned char)resp[2]);
-		// When band data is present (57 00 <preset> 06 <bass+10> <b1..b5+10>), decode the -10..10 values.
-		if (resp.size() >= 10)
+		this->_eqPreset = static_cast<EQ_PRESET>(eq->preset);
+		if (!eq->bands.empty())
 		{
-			this->_eqClearBass = (unsigned char)resp[4] - 10;
-			for (int i = 0; i < 5; i++)
-			{
-				this->_eqBands[i] = (unsigned char)resp[5 + i] - 10;
-			}
+			this->_eqBands = eq->bands;
+			this->_eqHasClearBass = eq->hasClearBass;
+			this->_eqClearBass = eq->clearBass;
 		}
 	}
 }
+
+int Headphones::getEqualizerBandCount() { return (int)this->_eqBands.size(); }
+bool Headphones::equalizerHasClearBass() { return this->_eqHasClearBass; }
 
 EQ_PRESET Headphones::getEqualizerPreset()
 {
@@ -195,10 +193,7 @@ void Headphones::setEqualizerCustom(int clearBass, const std::vector<int>& bands
 	std::lock_guard guard(this->_propertyMtx);
 	this->_eqPreset = EQ_PRESET::MANUAL;
 	this->_eqClearBass = clearBass;
-	for (int i = 0; i < 5; i++)
-	{
-		this->_eqBands[i] = i < (int)bands.size() ? bands[i] : 0;
-	}
+	this->_eqBands.assign(bands.begin(), bands.end());
 }
 
 int Headphones::getClearBass()
@@ -249,19 +244,15 @@ void Headphones::requestAmbientState()
 	auto protocolVersion = this->_conn.getProtocolVersion();
 	if (protocolVersion == SonyProtocolVersion::V2)
 	{
-		// GET: 66 17  ->  RET: 67 17 01 <effect> <settingType 0=NC/1=Ambient> <voice> <level>
-		auto resp = this->_conn.sendCommandAndReadResponse({ 0x66, 0x17 }, 0x67);
-		if (resp.size() >= 7)
+		// GET: 66 <type> -> RET: 67 <type> 01 <effect> <0=NC/1=Ambient> <voice> <level> [2 more bytes on 0x19]
+		auto resp = this->_conn.sendCommandAndReadResponse({ 0x66, (char)this->_ncAsmInquiryType }, 0x67, this->_ncAsmInquiryType);
+		if (auto state = ProtocolParsers::parseNcAsmState(resp))
 		{
-			bool on = resp[3] != 0;
-			bool ambient = resp[4] != 0;
-			bool voice = resp[5] != 0;
-			int level = (unsigned char)resp[6];
 			std::lock_guard guard(this->_propertyMtx);
 			// Update both current and desired so the UI reflects reality and isChanged() stays false.
-			this->_ambientSoundControl.current = this->_ambientSoundControl.desired = on;
-			this->_asmLevel.current = this->_asmLevel.desired = ambient ? level : 0;
-			this->_focusOnVoice.current = this->_focusOnVoice.desired = voice;
+			this->_ambientSoundControl.current = this->_ambientSoundControl.desired = state->enabled;
+			this->_asmLevel.current = this->_asmLevel.desired = state->ambient ? state->level : 0;
+			this->_focusOnVoice.current = this->_focusOnVoice.desired = state->focusOnVoice;
 		}
 	}
 	else
@@ -274,6 +265,18 @@ void Headphones::requestAmbientState()
 		// Cancelling and the level slider jump while being dragged. Trust the user's selection instead.
 		this->_conn.sendCommandAndReadResponse({ 0x66, 0x02 }, 0x67);
 	}
+}
+
+void Headphones::probeNcAsmInquiryType()
+{
+	// The WH-1000XM6 answers the legacy 0x17 inquiry with all zeros and reports its real state on 0x19.
+	// Setting the mode still goes through 68 17, which the XM6 accepts.
+	try
+	{
+		auto resp = this->_conn.sendCommandAndReadResponse({ 0x66, 0x19 }, 0x67, 0x19);
+		if (ProtocolParsers::parseNcAsmState(resp)) this->_ncAsmInquiryType = 0x19;
+	}
+	catch (...) {}
 }
 
 // --- Optional features (auto power off, firmware, codec, speak-to-chat, adaptive volume) ---

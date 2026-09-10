@@ -16,5 +16,12 @@ swiftc -target "$TARGET" -sdk "$SDK" -swift-version 5 \
     -o "$OUT/LogicTests"
 "$OUT/LogicTests"
 
+echo "== ProtocolParsersTests"
+clang++ -target "$TARGET" -isysroot "$SDK" -std=c++17 -I "$ROOT/Client" \
+    "$ROOT/Client/tests/ProtocolParsersTests.cpp" "$ROOT/Client/ProtocolParsers.cpp" \
+    "$ROOT/Client/CommandSerializer.cpp" "$ROOT/Client/ByteMagic.cpp" \
+    -o "$OUT/ProtocolParsersTests"
+"$OUT/ProtocolParsersTests"
+
 echo "== Localization"
 python3 "$ROOT/scripts/check_localization.py"

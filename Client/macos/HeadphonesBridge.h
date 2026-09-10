@@ -39,6 +39,10 @@ typedef NS_ENUM(NSInteger, SHCAmbientMode) {
 @property (nonatomic, readonly) NSInteger batteryCase;
 @property (nonatomic, readonly) NSInteger eqPreset;       // raw preset byte (EQ_PRESET)
 @property (nonatomic, readonly) BOOL supportsEqualizer;   // v2 devices only
+@property (nonatomic, readonly) NSInteger equalizerBandCount;   // 0 until read, then 5 or 10
+@property (nonatomic, readonly) BOOL equalizerHasClearBass;     // 5-band layout
+// NO while this device's equalizer write format is unverified (the WH-1000XM6's 10-band layout, spec §7).
+@property (nonatomic, readonly) BOOL equalizerWritable;
 @property (nonatomic, readonly) NSInteger clearBass;      // -10..10
 @property (nonatomic, readonly) BOOL dsee;                // DSEE / audio upsampling
 
