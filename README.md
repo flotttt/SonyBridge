@@ -111,16 +111,18 @@ first time (`brew trust AmitRajput-Dev/tap`).
 ## 🚀 Build from source
 
 <details>
-<summary><b>macOS (native SwiftUI app)</b></summary>
+<summary><b>macOS (menu bar app)</b></summary>
 
-Requires **Xcode 14+**.
+Requires the **Xcode Command Line Tools** (`xcode-select --install`) — the full Xcode app is not needed.
 
 ```sh
 git clone https://github.com/AmitRajput-Dev/SonyBridge.git
-open SonyBridge/Client/macos/SonyHeadphonesClient.xcodeproj
+cd SonyBridge
+make run          # builds build/SonyBridge.app and launches it
 ```
 
-Then ⌘R.
+`make test` runs the unit tests, `make release` builds a universal (Apple Silicon + Intel) zip, and
+`make run DEBUG=1` logs every frame exchanged with the headphones to `build/app.log`.
 </details>
 
 ## 🔬 How it works
