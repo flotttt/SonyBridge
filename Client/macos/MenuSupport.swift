@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 // A menu item that runs a closure (NSMenuItem only supports target/selector natively).
 final class ActionMenuItem: NSMenuItem {
@@ -27,5 +28,22 @@ func sectionHeader(_ title: String) -> NSMenuItem {
         .foregroundColor: NSColor.secondaryLabelColor,
     ])
     item.isEnabled = false
+    return item
+}
+
+enum MenuMetrics {
+    static let width: CGFloat = 280           // main menu rows
+    static let equalizerWidth: CGFloat = 300  // equalizer submenu
+    static let leading: CGFloat = 14          // lines up with native item titles
+    static let indent: CGFloat = 36           // rows nested under "Son ambiant"
+}
+
+// Wraps a SwiftUI view in a menu item, for rows a plain NSMenuItem can't express (sliders, switches, header).
+// Rows keep a fixed height: optional lines (the error line, notes) are separate plain items instead.
+func hostingMenuItem<Content: View>(width: CGFloat = MenuMetrics.width, @ViewBuilder _ content: () -> Content) -> NSMenuItem {
+    let host = NSHostingView(rootView: content().frame(width: width, alignment: .leading))
+    host.frame = NSRect(origin: .zero, size: host.fittingSize)
+    let item = NSMenuItem()
+    item.view = host
     return item
 }

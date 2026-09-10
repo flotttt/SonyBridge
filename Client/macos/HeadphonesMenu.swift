@@ -6,7 +6,6 @@ final class HeadphonesMenu {
     let menu = NSMenu()
     private let model: HeadphonesModel
     private var cancellables = Set<AnyCancellable>()
-    private let headerItem = NSMenuItem()
     private var modeItems: [(SHCAmbientMode, NSMenuItem)] = []
     private var connectItem: ActionMenuItem!
 
@@ -14,8 +13,7 @@ final class HeadphonesMenu {
         self.model = model
         menu.autoenablesItems = false
 
-        headerItem.isEnabled = false
-        menu.addItem(headerItem)
+        menu.addItem(hostingMenuItem { HeaderRow(model: model) })
         menu.addItem(.separator())
 
         menu.addItem(sectionHeader(tr("Ambient Sound Control")))
@@ -26,6 +24,13 @@ final class HeadphonesMenu {
             let item = ActionMenuItem(title) { [weak model] in model?.setMode(mode) }
             modeItems.append((mode, item))
             menu.addItem(item)
+            if mode == .ambientSound {
+                menu.addItem(hostingMenuItem { AmbientLevelRow(model: model) })
+                menu.addItem(hostingMenuItem {
+                    ToggleRow(model: model, title: tr("Focus on Voice"), indent: MenuMetrics.indent,
+                              isOn: { $0.focusOnVoice }, set: { $0.setFocusOnVoice($1) })
+                })
+            }
         }
         menu.addItem(.separator())
 
@@ -44,11 +49,6 @@ final class HeadphonesMenu {
 
     private func update() {
         let connected = model.connected
-        var header = model.deviceName.isEmpty ? "SonyBridge" : model.deviceName
-        if connected && model.batteryLevel >= 0 {
-            header += " — " + String(format: tr("%ld%%"), model.batteryLevel)
-        }
-        headerItem.title = header
         for (mode, item) in modeItems {
             item.state = connected && model.mode == mode ? .on : .off
             item.isEnabled = connected

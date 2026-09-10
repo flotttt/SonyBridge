@@ -10,6 +10,12 @@
 "Disconnect" = "Déconnecter";
 "Quit SonyBridge" = "Quitter SonyBridge";
 "%ld%%" = "%ld %%";
+"Not connected" = "Non connecté";
+"Connected" = "Connecté";
+"L %ld%%  R %ld%%" = "G %ld %%  D %ld %%";
+"Case %ld%%" = "Boîtier %ld %%";
+"Clear Bass" = "Clear Bass";
+"Focus on Voice" = "Focalisation sur la voix";
 
 /* Errors (HeadphonesBridge.mm, HeadphonesModel.swift) */
 "No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first." = "Aucun casque Sony connecté. Connectez d’abord votre casque dans les réglages Bluetooth de macOS.";
