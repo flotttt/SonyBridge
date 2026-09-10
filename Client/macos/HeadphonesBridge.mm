@@ -221,6 +221,8 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
                 hp->probeNcAsmInquiryType();
                 self->_initialized = YES;
             }
+            // Current NC/ASM state, on the channel probeNcAsmInquiryType() picked.
+            hp->requestAmbientState();
             hp->requestBattery();
             hp->requestEqualizer();
             hp->requestDsee();
