@@ -23,5 +23,12 @@ clang++ -target "$TARGET" -isysroot "$SDK" -std=c++17 -I "$ROOT/Client" \
     -o "$OUT/ProtocolParsersTests"
 "$OUT/ProtocolParsersTests"
 
+echo "== BluetoothWrapperTests"
+clang++ -target "$TARGET" -isysroot "$SDK" -std=c++17 -I "$ROOT/Client" \
+    "$ROOT/Client/tests/BluetoothWrapperTests.cpp" "$ROOT/Client/BluetoothWrapper.cpp" \
+    "$ROOT/Client/CommandSerializer.cpp" "$ROOT/Client/ByteMagic.cpp" \
+    -o "$OUT/BluetoothWrapperTests"
+"$OUT/BluetoothWrapperTests"
+
 echo "== Localization"
 python3 "$ROOT/scripts/check_localization.py"
