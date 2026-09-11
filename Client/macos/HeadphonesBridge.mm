@@ -7,6 +7,9 @@
 #import <IOBluetoothUI/IOBluetoothUI.h>
 #import <IOBluetooth/IOBluetooth.h>
 
+#include <atomic>
+#include <cstdint>
+#include <cstdio>
 #include <memory>
 #include "MacOSBluetoothConnector.h"
 #include "BluetoothWrapper.h"
@@ -14,14 +17,56 @@
 // RecoverableException comes in transitively via BluetoothWrapper.h -> IBluetoothConnector.h -> Exceptions.h.
 // (Exceptions.h isn't a project file reference, so it can't be #included directly from this directory.)
 
+// What a background block captures: the session's Headphones object plus the bridge's session generation at
+// dispatch time. One BluetoothWrapper serves the whole app lifetime, so after a disconnect a previous
+// session's queued work would otherwise keep running on whatever link comes next (possibly a v1 headset,
+// where the v2 battery inquiry 0x22 is POWER_OFF). Blocks call isCurrent() before every headphones call and
+// stop once the session ended.
+struct SHCSession {
+    std::shared_ptr<Headphones> hp;
+    std::shared_ptr<std::atomic<uint64_t>> generation;
+    uint64_t token;
+    bool isCurrent() const { return generation->load() == token; }
+};
+
+// Runs a finished block's completion on the main queue, unless its session ended meanwhile: the data it
+// would publish belongs to a previous connection. No caller waits on these completions.
+static void SHCCompleteOnMain(SHCSession session, void (^completion)(void)) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (session.isCurrent()) completion();
+    });
+}
+
+static void SHCFinishOnMain(SHCSession session, BOOL ok, NSString * _Nullable error,
+                            void (^completion)(BOOL, NSString * _Nullable)) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (session.isCurrent()) completion(ok, error);
+    });
+}
+
+// Core exceptions carry English developer text ("recv timed out", "No ACK received from device", ...): log it,
+// show a translated message instead.
+static NSString *SHCCommandError(const std::exception &exc) {
+    fprintf(stderr, "[error] %s\n", exc.what());
+    return NSLocalizedString(@"The headphones didn't respond.", nil);
+}
+
+static NSString *SHCConnectionError(const std::exception &exc) {
+    fprintf(stderr, "[error] %s\n", exc.what());
+    return NSLocalizedString(@"Couldn't open the control channel.", nil);
+}
+
 @implementation HeadphonesBridge {
     std::unique_ptr<BluetoothWrapper> _bt;
     // shared_ptr: background blocks capture their own copy so a disconnect()-triggered _hp.reset() on the
     // main thread can't free the object while a queued block is still mid-way through a read/write.
+    // One Headphones object per connection session (it also holds that session's "initialized" flag).
     std::shared_ptr<Headphones> _hp;
+    // Session generation, bumped when a session ends or starts; see SHCSession. shared_ptr so blocks can
+    // hold it without retaining self.
+    std::shared_ptr<std::atomic<uint64_t>> _generation;
     NSString *_deviceName;
     NSString *_deviceMac;
-    BOOL _initialized;
     // All user-initiated commands run on this SERIAL queue so quick successive taps reach the device in
     // order (a concurrent queue let them race and land out of order).
     dispatch_queue_t _cmdQueue;
@@ -30,9 +75,20 @@
 - (instancetype)init {
     if ((self = [super init])) {
         _bt = std::make_unique<BluetoothWrapper>(std::make_unique<MacOSBluetoothConnector>());
+        _generation = std::make_shared<std::atomic<uint64_t>>(0);
         _cmdQueue = dispatch_queue_create("com.sonybridge.commands", DISPATCH_QUEUE_SERIAL);
     }
     return self;
+}
+
+// Main thread only (reads _hp).
+- (SHCSession)currentSession {
+    return SHCSession{ _hp, _generation, _generation->load() };
+}
+
+// Invalidates every block captured so far: they stop before their next headphones call.
+- (void)bumpSession {
+    _generation->fetch_add(1);
 }
 
 - (BOOL)connected {
@@ -110,6 +166,8 @@
 // Only the 5-band + Clear Bass layout (WH-CH720N family) has a verified write format.
 - (BOOL)equalizerWritable { return self.supportsEqualizer && _hp && _hp->equalizerHasClearBass(); }
 
+- (BOOL)hasDsee { return _hp && _hp->hasDsee(); }
+
 - (BOOL)dsee {
     return _hp ? _hp->getDsee() : NO;
 }
@@ -168,10 +226,15 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 }
 
 - (void)connectDevice:(IOBluetoothDevice *)device completion:(void (^)(BOOL, NSString * _Nullable))completion {
+    // A connection attempt ends whatever session came before: its queued work stops before its next call,
+    // and no refresh can pair the new link with the old Headphones object while the link opens.
+    _hp.reset();
+    [self bumpSession];
+
     try {
         _bt->connect([[device addressString] UTF8String]);
-    } catch (RecoverableException &exc) {
-        completion(NO, @(exc.what()));
+    } catch (std::exception &exc) {
+        completion(NO, SHCConnectionError(exc));
         return;
     }
 
@@ -191,7 +254,9 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 
     _deviceName = [device nameOrAddress];
     _deviceMac = [device addressString];
+    // New session: a fresh Headphones object (not initialized yet) and a new generation.
     _hp = std::make_shared<Headphones>(*_bt);
+    [self bumpSession];
     completion(YES, nil);
 }
 
@@ -221,81 +286,86 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
 }
 
 - (void)disconnect {
+    // First, so this session's queued work stops before its next headphones call.
+    [self bumpSession];
     if (_bt) _bt->disconnect();
     _hp.reset();
     _deviceName = nil;
     _deviceMac = nil;
-    _initialized = NO;
 }
 
 - (void)refreshStatusWithCompletion:(void (^)(void))completion {
     if (!_hp || !self.connected) { completion(); return; }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     // CRITICAL: the init/battery/EQ inquiries below use v2 opcodes. Opcode 0x22 is BATTERY_LEVEL_REQUEST
     // on v2 but POWER_OFF on v1 - sending it to a v1 device (e.g. WH-1000XM4) powers the headphones off.
     // A v1 device still needs *some* valid handshake traffic right after connect or it drops/powers off on
     // its own, so read its ambient state (read-only 66 02) instead of sending nothing.
+    // This dispatch-time check only picks the path: the session check stops the block once this session
+    // ended, and Headphones re-checks the live protocol before every v2-only frame.
     if (_bt->getProtocolVersion() != SonyProtocolVersion::V2) {
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-            try { hp->requestAmbientState(); } catch (std::exception &exc) {}
-            dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
+            if (!session.isCurrent()) return;
+            try { session.hp->requestAmbientState(); } catch (std::exception &) {}
+            SHCCompleteOnMain(session, completion);
         });
         return;
     }
     // Reads run on the global queue (not the serial command queue) so they don't block quick user taps;
     // per-call the connector mutex still serializes actual I/O.
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        Headphones *hp = session.hp.get(); // kept alive by the block's session copy
         // Fast, always-supported reads first, then update the UI immediately...
         // Each read is independent: one lost frame (recv timeout) must not skip the others, or a fresh
         // connection stays half-initialized (no battery, no EQ, NC/ASM polled on the wrong channel).
-        if (!self->_initialized) {
-            for (int attempt = 0; attempt < 2 && !self->_initialized; attempt++) {
-                try {
-                    hp->initDevice();
-                    self->_initialized = YES;
-                } catch (std::exception &exc) {}
+        if (!hp->isInitialized()) {
+            for (int attempt = 0; attempt < 2 && !hp->isInitialized(); attempt++) {
+                if (!session.isCurrent()) return;
+                try { hp->initDevice(); } catch (std::exception &) {}
             }
             // Probe even if init never answered, so the NC/ASM channel is still picked (catches internally).
+            if (!session.isCurrent()) return;
             hp->probeNcAsmInquiryType();
         }
         // Current NC/ASM state, on the channel probeNcAsmInquiryType() picked.
-        try { hp->requestAmbientState(); } catch (std::exception &exc) {}
-        try { hp->requestBattery(); } catch (std::exception &exc) {}
-        try { hp->requestEqualizer(); } catch (std::exception &exc) {}
-        try { hp->requestDsee(); } catch (std::exception &exc) {}
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
+        if (!session.isCurrent()) return;
+        try { hp->requestAmbientState(); } catch (std::exception &) {}
+        if (!session.isCurrent()) return;
+        try { hp->requestBattery(); } catch (std::exception &) {}
+        if (!session.isCurrent()) return;
+        try { hp->requestEqualizer(); } catch (std::exception &) {}
+        if (!session.isCurrent()) return;
+        try { hp->requestDsee(); } catch (std::exception &) {}
+        SHCCompleteOnMain(session, completion);
 
         // ...then the optional-feature probes, which can each take a couple seconds to time out on a
         // device that doesn't support them. Update the UI again once they've settled.
-        try { hp->probeCapabilities(); } catch (std::exception &exc) {}
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
+        if (!session.isCurrent()) return;
+        try { hp->probeCapabilities(); } catch (std::exception &) {}
+        SHCCompleteOnMain(session, completion);
     });
 }
 
 - (void)refreshDynamicWithCompletion:(void (^)(void))completion {
     if (!_hp || !self.connected) { completion(); return; }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         // The headphone's physical button only changes ambient/NC, so that's all we poll (keeps traffic low).
         // requestAmbientState() is protocol-aware (v2 uses 66 17, v1 uses 66 02), so this is safe on both.
-        try { hp->requestAmbientState(); } catch (std::exception &exc) {}
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
+        if (!session.isCurrent()) return;
+        try { session.hp->requestAmbientState(); } catch (std::exception &) {}
+        SHCCompleteOnMain(session, completion);
     });
 }
 
 - (void)refreshBatteryWithCompletion:(void (^)(void))completion {
     // CRITICAL: 0x22 is BATTERY_LEVEL_REQUEST on v2 but POWER_OFF on v1 - never send it to a v1 device.
     if (!_hp || !self.connected || _bt->getProtocolVersion() != SonyProtocolVersion::V2) { completion(); return; }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        try { hp->requestBattery(); } catch (std::exception &exc) {}
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
+        if (!session.isCurrent()) return;
+        try { session.hp->requestBattery(); } catch (std::exception &) {}
+        SHCCompleteOnMain(session, completion);
     });
 }
 
@@ -309,21 +379,18 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
         completion(NO, NSLocalizedString(@"Equalizer control isn't supported on this device yet.", nil));
         return;
     }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil;
         BOOL ok = YES;
         try {
-            hp->setEqualizerPreset(static_cast<EQ_PRESET>((unsigned char)preset));
+            session.hp->setEqualizerPreset(static_cast<EQ_PRESET>((unsigned char)preset));
         } catch (std::exception &exc) {
             ok = NO;
-            error = @(exc.what());
+            error = SHCCommandError(exc);
         }
-        dispatch_async(dispatch_get_main_queue(), ^{
-            completion(ok, error);
-        });
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 
@@ -335,15 +402,14 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
     std::vector<int> cbands;
     for (NSNumber *n in bands) cbands.push_back((int)n.integerValue);
     int cbass = (int)bass;
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil; BOOL ok = YES;
         try {
-            hp->setEqualizerCustom(cbass, cbands);
-        } catch (std::exception &exc) { ok = NO; error = @(exc.what()); }
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(ok, error); });
+            session.hp->setEqualizerCustom(cbass, cbands);
+        } catch (std::exception &exc) { ok = NO; error = SHCCommandError(exc); }
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 
@@ -352,15 +418,14 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
         completion(NO, NSLocalizedString(@"Not supported on this device.", nil));
         return;
     }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil; BOOL ok = YES;
         try {
-            hp->setDsee(enabled);
-        } catch (std::exception &exc) { ok = NO; error = @(exc.what()); }
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(ok, error); });
+            session.hp->setDsee(enabled);
+        } catch (std::exception &exc) { ok = NO; error = SHCCommandError(exc); }
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 
@@ -389,60 +454,51 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
             break;
     }
 
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil;
         BOOL ok = YES;
         try {
-            if (hp->isChanged()) hp->setChanges();
-        } catch (RecoverableException &exc) {
-            ok = NO;
-            error = @(exc.what());
+            if (session.hp->isChanged()) session.hp->setChanges();
         } catch (std::exception &exc) {
             ok = NO;
-            error = @(exc.what());
+            error = SHCCommandError(exc);
         }
-        dispatch_async(dispatch_get_main_queue(), ^{
-            completion(ok, error);
-        });
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 
 - (void)setAutoPowerOff:(NSInteger)index completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected) { completion(NO, NSLocalizedString(@"Not connected.", nil)); return; }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil; BOOL ok = YES;
-        try { hp->setAutoPowerOff((int)index); } catch (std::exception &exc) { ok = NO; error = @(exc.what()); }
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(ok, error); });
+        try { session.hp->setAutoPowerOff((int)index); } catch (std::exception &exc) { ok = NO; error = SHCCommandError(exc); }
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 
 - (void)setSpeakToChat:(BOOL)enabled completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected) { completion(NO, NSLocalizedString(@"Not connected.", nil)); return; }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil; BOOL ok = YES;
-        try { hp->setSpeakToChat(enabled); } catch (std::exception &exc) { ok = NO; error = @(exc.what()); }
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(ok, error); });
+        try { session.hp->setSpeakToChat(enabled); } catch (std::exception &exc) { ok = NO; error = SHCCommandError(exc); }
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 
 - (void)setAdaptiveVolume:(BOOL)enabled completion:(void (^)(BOOL, NSString * _Nullable))completion {
     if (!_hp || !self.connected) { completion(NO, NSLocalizedString(@"Not connected.", nil)); return; }
-    // Capture a shared_ptr copy so the background block keeps the object alive even if disconnect() (main
-    // thread) resets _hp while this block is still running.
-    std::shared_ptr<Headphones> hp = _hp;
+    SHCSession session = [self currentSession];
     dispatch_async(_cmdQueue, ^{
+        if (!session.isCurrent()) return;
         NSString *error = nil; BOOL ok = YES;
-        try { hp->setAdaptiveVolume(enabled); } catch (std::exception &exc) { ok = NO; error = @(exc.what()); }
-        dispatch_async(dispatch_get_main_queue(), ^{ completion(ok, error); });
+        try { session.hp->setAdaptiveVolume(enabled); } catch (std::exception &exc) { ok = NO; error = SHCCommandError(exc); }
+        SHCFinishOnMain(session, ok, error, completion);
     });
 }
 

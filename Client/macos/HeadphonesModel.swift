@@ -39,6 +39,7 @@ final class HeadphonesModel: ObservableObject {
     @Published private(set) var eqBands: [Int] = []
     @Published private(set) var eqHasClearBass = false
     @Published private(set) var clearBass = 0
+    @Published private(set) var hasDsee = false
     @Published private(set) var dsee = false
 
     @Published private(set) var hasAutoPowerOff = false
@@ -99,6 +100,7 @@ final class HeadphonesModel: ObservableObject {
         }
         cancelReconnect()
         connectionState = .connected
+        errorMessage = nil // a failed manual attempt's error must not stay under a "Connected" header
         syncFromBridge()
         settings?.lastDeviceAddress = deviceMac
         bridge.refreshStatus { [weak self] in self?.syncFromBridge() } // called after reads, then after probes
@@ -120,6 +122,9 @@ final class HeadphonesModel: ObservableObject {
     // Not user-initiated: failures stay silent (normal while the headset sleeps).
     func autoConnect(toAddress address: String) {
         guard connectionState == .disconnected else { return }
+        // With Reconnect Automatically on, a failed attempt (launch, DeviceWatcher) is retried by the failure
+        // path's scheduleReconnect() while the headset stays connected to macOS.
+        if settings?.autoReconnect == true { reconnectAddress = address }
         connectionState = .connecting
         bridge.connect(toAddress: address) { ok, error in
             self.handleConnectResult(ok: ok, error: error, userInitiated: false)
@@ -308,7 +313,9 @@ final class HeadphonesModel: ObservableObject {
         deviceMac = bridge.deviceMac ?? deviceMac
         protocolVersion = bridge.protocolVersionString ?? ""
         maxAmbientLevel = bridge.maxAmbientLevel
-        readAmbientFromBridge()
+        // refreshStatus calls this twice (the second ~12 s after connect): don't undo a mode change the user
+        // made meanwhile.
+        if pollGuard.shouldAcceptPoll(for: .ambient) { readAmbientFromBridge() }
         readBatteryFromBridge()
         supportsEqualizer = bridge.supportsEqualizer
         equalizerWritable = bridge.equalizerWritable
@@ -316,6 +323,7 @@ final class HeadphonesModel: ObservableObject {
         eqHasClearBass = bridge.equalizerHasClearBass
         clearBass = bridge.clearBass
         eqBands = (0..<bridge.equalizerBandCount).map { bridge.equalizerBand(at: $0) }
+        hasDsee = bridge.hasDsee
         dsee = bridge.dsee
         hasAutoPowerOff = bridge.hasAutoPowerOff
         autoPowerOff = bridge.autoPowerOff

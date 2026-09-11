@@ -17,6 +17,9 @@ class FakeBluetoothConnector : public IBluetoothConnector
 public:
 	std::vector<Buffer> sentFrames;
 	std::deque<Buffer> incomingFrames;
+	// What getProtocolVersion() reports. V1 by default (BluetoothWrapperTests don't care); tests that model a
+	// v2 headset set V2.
+	SonyProtocolVersion protocolVersion = SonyProtocolVersion::V1;
 
 	int send(char* buf, size_t length) noexcept(false) override
 	{
@@ -44,7 +47,7 @@ public:
 	void disconnect() noexcept override {}
 	bool isConnected() noexcept override { return true; }
 	std::vector<BluetoothDevice> getConnectedDevices() override { return {}; }
-	SonyProtocolVersion getProtocolVersion() noexcept override { return SonyProtocolVersion::V1; }
+	SonyProtocolVersion getProtocolVersion() noexcept override { return this->protocolVersion; }
 };
 
 // Decodes a frame previously recorded by FakeBluetoothConnector::send (includes START_MARKER/END_MARKER).
