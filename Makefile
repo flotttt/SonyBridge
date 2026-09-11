@@ -1,7 +1,7 @@
 # SonyBridge — build without Xcode. See scripts/build.sh for the knobs.
 DEBUG ?= 0
 
-.PHONY: all build run test release clean
+.PHONY: all build run test release install clean
 
 all: build
 
@@ -23,6 +23,12 @@ test:
 release:
 	CONFIG=release ARCHS="arm64 x86_64" ./scripts/build.sh
 	cd build && rm -f SonyBridge.zip && ditto -c -k --keepParent SonyBridge.app SonyBridge.zip
+
+install: release
+	-pkill -x SonyBridge; while pgrep -x SonyBridge >/dev/null; do sleep 0.2; done
+	rm -rf "/Applications/SonyBridge.app"
+	ditto "$(CURDIR)/build/SonyBridge.app" "/Applications/SonyBridge.app"
+	open "/Applications/SonyBridge.app"
 
 clean:
 	rm -rf build

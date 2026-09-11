@@ -4,32 +4,23 @@
 
 <br/>
 
-**An unofficial, open-source desktop app for Sony headphones — Noise Cancelling, Ambient Sound, EQ, DSEE and battery, without the phone.**
+**An unofficial, open-source macOS menu bar app for Sony headphones — Noise Cancelling, Ambient Sound, EQ, DSEE and battery, without the phone.**
 
 <br/>
 
-[![Build](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/xcodebuild.yml/badge.svg)](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/xcodebuild.yml)
+[![Build](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/build.yml/badge.svg)](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/AmitRajput-Dev/SonyBridge?include_prereleases&sort=semver)](https://github.com/AmitRajput-Dev/SonyBridge/releases)
-[![Downloads](https://img.shields.io/github/downloads/AmitRajput-Dev/SonyBridge/total?color=success)](https://github.com/AmitRajput-Dev/SonyBridge/releases)
 [![Stars](https://img.shields.io/github/stars/AmitRajput-Dev/SonyBridge?style=flat)](https://github.com/AmitRajput-Dev/SonyBridge/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platform-macOS-blue)
 
 <br/>
 
-[![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/AmitRajput-Dev/SonyBridge/releases/latest)
-[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/AmitRajput-Dev)
-[![Donate via Razorpay](https://img.shields.io/badge/Donate-Razorpay-3395FF?style=for-the-badge&logo=razorpay&logoColor=white)](https://razorpay.me/@amitpratapsingrajput)
+**[Features](#-features)** · **[Install](#-install)** · **[Usage](#-usage)** · **[Supported headphones](#-supported-headphones)** · **[Build from source](#-build-from-source)** · **[Contributing](#-contributing)** · **[Credits](#-credits)**
 
 <br/>
 
-**[Features](#-features)** · **[Download](#-download)** · **[How it works](#-how-it-works)** · **[Contributing](#-contributing)** · **[Credits](#-credits)**
-
-<br/>
-
-<img src="docs/connected.png" width="330" alt="SonyBridge connected to a WH-CH720N">
-&nbsp;&nbsp;
-<img src="docs/disconnected.png" width="330" alt="SonyBridge disconnected state">
+*Screenshots of the menu bar app are coming — for now, see the [Usage](#-usage) section below for what to expect.*
 
 </div>
 
@@ -39,62 +30,83 @@
 
 Sony locks headphone settings behind their mobile-only *Sound Connect* app. If you live on a laptop,
 you're stuck. SonyBridge talks to the headphones directly over Bluetooth RFCOMM using Sony's
-reverse-engineered binary protocol — no phone required.
+reverse-engineered binary protocol — no phone required. It lives entirely in your macOS menu bar: no
+Dock icon, no window, just a native menu.
 
 The original [SonyHeadphonesClient](https://github.com/Plutoberth/SonyHeadphonesClient) only spoke Sony's
 **first-generation** protocol, so newer headsets (WH-CH720N, XM4/XM5, WF-series, LinkBuds…) just timed
-out on connect. SonyBridge adds full **second-generation ("v2") protocol** support and a native SwiftUI
-app for macOS.
+out on connect. SonyBridge adds full **second-generation ("v2") protocol** support and a native macOS
+menu bar app, built with AppKit/SwiftUI.
 
 ## ✨ Features
 
-- 🎚️ **Ambient Sound Control** — Noise Cancelling · Ambient Sound (0–20 levels) · Off
-- 🗣️ **Focus on Voice** passthrough
-- 🎛️ **Equalizer** — presets *and* a full **Manual mode** with 5 bands + Clear Bass
+**Sound modes**
+- 🎚️ **Ambient Sound Control** — Noise Cancelling · Ambient Sound (with a 1–20 level slider and a Focus on Voice switch) · Off
+- 🔄 **Live button sync** — following the headset's own NC button live, even while the menu is open
+
+**Equalizer**
+- 🎛️ **Equalizer** — presets *and* a **Manual mode** with vertical sliders (5 bands + Clear Bass on older models). The **WH-1000XM6**'s 10-band equalizer is read and displayed, but changing it isn't available yet — its write format isn't verified, so the sliders are greyed out with a "coming soon" note
+
+**Other settings** *(each shown only if your headset supports it)*
 - ✨ **DSEE** — Sony's audio upscaling for compressed sources
+- 🗣️ **Speak-to-Chat** and **Adaptive Volume**
+- ⏱️ **Auto Power-Off** — Off, 5 min, 30 min, 1 hour, 3 hours, or when taken off
+
+**Battery & info**
 - 🔋 **Battery level** — live percentage, including **per-earbud + case** for TWS models
-- 🎧 **Codec & firmware** readout
-- 🧩 **Capability-gated extras** — Auto Power-Off · Speak-to-Chat · Adaptive Volume (only shown when your device supports them)
-- 🖼️ **Device hero image** — your headphones' official Sony product render
-- 🔄 **Live button sync** — changes made on the headset reflect in the app
-- 🔌 **Auto-connect** to your already-paired Sony headset
-- 🧬 **Dual-protocol** — auto-detects and speaks either protocol generation
-- 🌑 **Modern UI** — dark, minimal, shaped after Sony's own app, in native SwiftUI
+- 🎧 **About the Headphones** — firmware, codec, protocol, and Bluetooth address
 
-## 📥 Download
+**Automatic connection**
+- 📍 **Lives in the menu bar** — a native macOS menu; the icon shows the current mode and dims when disconnected
+- 🔌 **Connect Automatically** (on by default) — at launch and whenever your headset connects to the Mac
+- 🔁 **Reconnect Automatically** (on by default) — retries if the control link drops while the headset is still connected, backing off from 3 s up to every 60 s
+- 🚀 **Launch at Login** (off by default) — uses macOS Login Items
 
-<table>
-<tr>
-<th>Platform</th><th>Get it</th><th>Notes</th>
-</tr>
-<tr>
-<td><b>macOS</b></td>
-<td>
+**Languages**
+- 🌍 **English & French** — follows your macOS language
 
-`brew tap AmitRajput-Dev/tap && brew install --cask sonybridge`
+## 📥 Install
 
-or [**Download .app**](https://github.com/AmitRajput-Dev/SonyBridge/releases/latest)
-
-</td>
-<td>macOS 11+ · Apple Silicon &amp; Intel</td>
-</tr>
-</table>
-
-> 💡 After launching, **connect your headphones in your macOS Bluetooth settings first**, then open SonyBridge and hit *Connect*. Keep audio playing — Sony headsets drop the control link when idle to save power.
-
-<details>
-<summary><b>macOS install notes (Gatekeeper)</b></summary>
-
-The app is ad-hoc signed (not notarized — no paid Apple Developer account). The Homebrew cask clears the
-quarantine flag for you. For a direct download, allow it once:
+**Requirements:** macOS 13 or later, and the Xcode **Command Line Tools** (no full Xcode app needed):
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/SonyBridge.app
+xcode-select --install
 ```
 
-…or right-click the app → **Open** → **Open**. Homebrew also asks you to trust the third-party tap the
-first time (`brew trust AmitRajput-Dev/tap`).
-</details>
+Then:
+
+```sh
+git clone https://github.com/AmitRajput-Dev/SonyBridge.git
+cd SonyBridge
+make install
+```
+
+`make install` builds a release version, quits SonyBridge if it's running, and installs it to
+`/Applications/SonyBridge.app`. Afterwards, launch it from Launchpad, Spotlight, or Finder.
+
+> 💡 On first launch, macOS asks for **Bluetooth permission** — allow it, otherwise SonyBridge can't
+> talk to your headphones. Pair and connect your headphones in macOS **Bluetooth settings** first.
+
+**To update:** pull the latest changes and run `make install` again.
+
+**To uninstall:** quit SonyBridge, then drag `/Applications/SonyBridge.app` to the Trash. If you turned
+on **Launch at Login**, turn it off first (from the SonyBridge Options menu) so macOS doesn't keep a
+stale login item around.
+
+## 🕹️ Usage
+
+Click the SonyBridge icon in the menu bar to open the menu. If nothing is connected yet, choose
+**Connect…** — it uses the Sony headset already connected to macOS, or opens the macOS Bluetooth picker
+if none is connected yet.
+
+From the menu you can:
+- switch **sound modes** (Noise Cancelling / Ambient Sound / Off) and, in Ambient Sound, adjust the level and Focus on Voice;
+- pick an **Equalizer** preset or dial in a **Manual** curve;
+- toggle **DSEE**, **Speak-to-Chat**, and **Adaptive Volume** (only the ones your model supports);
+- set **Auto Power-Off**;
+- check battery and firmware under **About the Headphones**;
+- turn **Launch at Login**, **Connect Automatically**, and **Reconnect Automatically** on or off under **SonyBridge Options**;
+- **Disconnect** (auto-reconnect stays off until the headset reconnects on its own or you click **Connect…** again) or **Quit SonyBridge** (⌘Q).
 
 ## 🎧 Supported headphones
 
@@ -107,23 +119,29 @@ first time (`brew trust AmitRajput-Dev/tap`).
 
 > Only the WH-CH720N is fully hardware-verified. Others share the same protocol family, so the basics
 > should work — per-model quirks are untested. Reports and PRs for other devices are very welcome.
+>
+> On the **WH-1000XM6**, everything works as listed above except changing the equalizer in Manual mode
+> (reading its 10-band equalizer already works) — that's coming in a later update.
 
 ## 🚀 Build from source
-
-<details>
-<summary><b>macOS (menu bar app)</b></summary>
 
 Requires the **Xcode Command Line Tools** (`xcode-select --install`) — the full Xcode app is not needed.
 
 ```sh
 git clone https://github.com/AmitRajput-Dev/SonyBridge.git
 cd SonyBridge
-make run          # builds build/SonyBridge.app and launches it
+make              # debug build → build/SonyBridge.app
+make run          # builds and launches the app (add DEBUG=1 to log every protocol frame)
+make test         # unit tests + translation check
+make release      # universal (Apple Silicon + Intel) build, zipped to build/SonyBridge.zip
+make clean        # remove build/
 ```
 
-`make test` runs the unit tests, `make release` builds a universal (Apple Silicon + Intel) zip, and
-`make run DEBUG=1` logs every frame exchanged with the headphones to `build/app.log`.
-</details>
+`make run DEBUG=1` logs every frame exchanged with the headphones to
+`~/Library/Logs/SonyBridge/app.log` (`build/app.log` is a symlink to it).
+
+> ⚠️ Always launch SonyBridge through `open`, Finder, or `make run`/`make install` — never by running
+> `Contents/MacOS/SonyBridge` directly, or macOS's privacy protection can close the app.
 
 ## 🔬 How it works
 
@@ -143,6 +161,14 @@ init handshake and per-frame host-ACK the newer devices require, plus battery, E
 Protocol byte layouts were cross-referenced against
 [**GadgetBridge**](https://codeberg.org/Freeyourgadget/Gadgetbridge)'s Sony implementation.
 
+## 🛠️ Troubleshooting
+
+- **SonyBridge doesn't see my headphones** — pair and connect them in macOS **Bluetooth settings** first, then use **Connect…** in the menu.
+- **No Bluetooth permission prompt, or you denied it** — macOS asks for Bluetooth access on first launch; allow it, or SonyBridge can't talk to your headphones.
+- **The menu bar icon is missing** — on MacBooks with a notch, the icon can be hidden when the menu bar is full. Free up some room (quit or hide other menu bar icons).
+- **Controls stopped responding** — click **Disconnect** then **Connect…** in the menu, or turn the headphones off and on.
+- **The app quits itself right after opening** — launch it through `open`, Finder, Launchpad, Spotlight, or `make run`/`make install`, not by running `Contents/MacOS/SonyBridge` directly; macOS's privacy protection can close apps launched that way.
+
 ## 🤝 Contributing
 
 Contributions are very welcome — especially **device reports** and **testing on real hardware**.
@@ -158,21 +184,6 @@ SonyBridge builds directly on the work of:
 - [**SonyHeadphonesClient**](https://github.com/Plutoberth/SonyHeadphonesClient) by Plutoberth, Mr-M33533K5 &amp; contributors — the original cross-platform client and protocol foundation
 - [**semvis123**](https://github.com/semvis123) — the original macOS port
 - [**GadgetBridge**](https://codeberg.org/Freeyourgadget/Gadgetbridge) — reverse-engineered v2 protocol reference
-
-**Community contributors & testers:**
-
-- [**@CrisProCrack**](https://github.com/CrisProCrack) — WH-1000XM4 (v1) connect fix
-- [**@Sebsdnl**](https://github.com/Sebsdnl) — Linux/Wayland crash fix &amp; ULT WEAR support
-- **u/More_Way_6784**, **@joelslaby** — WH-1000XM4 hardware testing
-
-## ❤️ Support
-
-If SonyBridge is useful to you, consider supporting it — it keeps the reverse-engineering going:
-
-- 🌍 [**GitHub Sponsors**](https://github.com/sponsors/AmitRajput-Dev) — worldwide (cards, one-off or monthly)
-- 🇮🇳 [**Razorpay / UPI**](https://razorpay.me/@amitpratapsingrajput) — for supporters in India
-
-Starring the repo helps too. ⭐
 
 ## ⚠️ Disclaimer
 
