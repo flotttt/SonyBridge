@@ -1,6 +1,7 @@
 #include "BluetoothWrapper.h"
 #include "Constants.h"
 
+#include <atomic>
 #include <mutex>
 
 template <class T>
@@ -33,8 +34,15 @@ public:
 	void setVptType(int val);
 	int getVptType();
 
+	// SAFETY: every v2-only inquiry/setter below (init, battery, equalizer, DSEE, NC/ASM probe, capability
+	// probes and their setters) returns WITHOUT sending anything when the live link isn't v2 - opcode 0x22
+	// (BATTERY_GET on v2) is POWER_OFF on v1. This guards against a stale session's queued work reaching a
+	// v1 headset that got connected on the same BluetoothWrapper right after.
+
 	// Handshake the device expects before it answers inquiry (GET) commands on the v2 protocol.
 	void initDevice();
+	// True once initDevice() got its reply. Per object, i.e. per connection session.
+	bool isInitialized();
 
 	// Battery (v2 inquiry). getBatteryLevel() returns -1 until requestBattery() succeeds.
 	// For TWS earbuds requestBattery() also fills the per-earbud + case levels (hasDualBattery()).
@@ -53,12 +61,13 @@ public:
 	// Custom (manual) EQ: 5 band values + clear bass, each in [-10, 10]. Selects the MANUAL preset.
 	void setEqualizerCustom(int clearBass, const std::vector<int>& bands);
 	int getClearBass();
-	int getEqualizerBand(int index); // 0..4
+	int getEqualizerBand(int index); // 0..4 (5-band layout) or 0..9 (10-band layout)
 	int getEqualizerBandCount();   // 0 until read, then 5 (+ Clear Bass) or 10
 	bool equalizerHasClearBass();
 
 	// DSEE / audio upsampling (v2).
 	void requestDsee();
+	bool hasDsee(); // true once the device answered requestDsee()
 	bool getDsee();
 	void setDsee(bool enabled);
 
@@ -93,6 +102,11 @@ public:
 	bool isChanged();
 	void setChanges();
 private:
+	// Checked on every v2-only call (not cached): the wrapper's link can change under a long-lived object.
+	bool isV2();
+
+	std::atomic<bool> _initialized{ false };
+
 	Property<bool> _ambientSoundControl = { 0 };
 	Property<bool> _focusOnVoice = { 0 };
 	Property<int> _asmLevel = { 0 };
@@ -115,6 +129,7 @@ private:
 	unsigned char _ncAsmInquiryType = 0x17; // 0x19 on the WH-1000XM6, see probeNcAsmInquiryType()
 	int _eqClearBass = 0;
 	bool _dsee = false;
+	bool _hasDsee = false;
 
 	bool _hasAutoPowerOff = false; int _autoPowerOff = 0;
 	bool _hasFirmware = false; std::string _firmware;

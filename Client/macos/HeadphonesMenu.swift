@@ -116,7 +116,7 @@ final class HeadphonesMenu {
         equalizerMenu.addItem(.separator())
         equalizerRowItem = hostingMenuItem(width: MenuMetrics.equalizerWidth) { EqualizerRow(model: model) }
         equalizerMenu.addItem(equalizerRowItem)
-        equalizerNoteItem.title = tr("Manual equalizer coming soon for this model")
+        equalizerNoteItem.title = tr("Equalizer changes coming soon for this model")
         equalizerNoteItem.isEnabled = false
         equalizerMenu.addItem(equalizerNoteItem)
         equalizerResetItem = ActionMenuItem(tr("Reset")) { [weak model] in model?.resetEqualizer() }
@@ -191,7 +191,7 @@ final class HeadphonesMenu {
         equalizerRowItem.isHidden = model.eqBands.isEmpty
         equalizerResetItem.isEnabled = connected && model.equalizerWritable && model.eqPreset == 0xA0
 
-        dseeItem.isHidden = !model.supportsEqualizer
+        dseeItem.isHidden = !model.hasDsee
         speakToChatItem.isHidden = !model.hasSpeakToChat
         adaptiveVolumeItem.isHidden = !model.hasAdaptiveVolume
 

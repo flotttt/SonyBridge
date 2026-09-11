@@ -8,9 +8,7 @@
 
 <br/>
 
-[![Build](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/build.yml/badge.svg)](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/AmitRajput-Dev/SonyBridge?include_prereleases&sort=semver)](https://github.com/AmitRajput-Dev/SonyBridge/releases)
-[![Stars](https://img.shields.io/github/stars/AmitRajput-Dev/SonyBridge?style=flat)](https://github.com/AmitRajput-Dev/SonyBridge/stargazers)
+[![Build](https://github.com/flotttt/SonyBridge/actions/workflows/build.yml/badge.svg)](https://github.com/flotttt/SonyBridge/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platform-macOS-blue)
 
@@ -34,18 +32,18 @@ reverse-engineered binary protocol — no phone required. It lives entirely in y
 Dock icon, no window, just a native menu.
 
 The original [SonyHeadphonesClient](https://github.com/Plutoberth/SonyHeadphonesClient) only spoke Sony's
-**first-generation** protocol, so newer headsets (WH-CH720N, XM4/XM5, WF-series, LinkBuds…) just timed
+**first-generation** protocol, so newer headsets (WH-CH720N, WH-1000XM5/XM6, WF-series, LinkBuds…) just timed
 out on connect. SonyBridge adds full **second-generation ("v2") protocol** support and a native macOS
 menu bar app, built with AppKit/SwiftUI.
 
 ## ✨ Features
 
 **Sound modes**
-- 🎚️ **Ambient Sound Control** — Noise Cancelling · Ambient Sound (with a 1–20 level slider and a Focus on Voice switch) · Off
+- 🎚️ **Ambient Sound Control** — Noise Cancelling · Ambient Sound (with a 1–20 level slider (1–19 on older models) and a Focus on Voice switch) · Off
 - 🔄 **Live button sync** — following the headset's own NC button live, even while the menu is open
 
 **Equalizer**
-- 🎛️ **Equalizer** — presets *and* a **Manual mode** with vertical sliders (5 bands + Clear Bass on older models). The **WH-1000XM6**'s 10-band equalizer is read and displayed, but changing it isn't available yet — its write format isn't verified, so the sliders are greyed out with a "coming soon" note
+- 🎛️ **Equalizer** — presets *and* a **Manual mode** with vertical sliders (5 bands + Clear Bass on older models). The **WH-1000XM6**'s 10-band equalizer is read and displayed; changing the equalizer (presets and Manual) is coming in a later update — its write format isn't verified yet, so the presets and sliders are greyed out with a "coming soon" note
 
 **Other settings** *(each shown only if your headset supports it)*
 - ✨ **DSEE** — Sony's audio upscaling for compressed sources
@@ -76,7 +74,7 @@ xcode-select --install
 Then:
 
 ```sh
-git clone https://github.com/AmitRajput-Dev/SonyBridge.git
+git clone https://github.com/flotttt/SonyBridge.git
 cd SonyBridge
 make install
 ```
@@ -104,31 +102,31 @@ From the menu you can:
 - pick an **Equalizer** preset or dial in a **Manual** curve;
 - toggle **DSEE**, **Speak-to-Chat**, and **Adaptive Volume** (only the ones your model supports);
 - set **Auto Power-Off**;
-- check battery and firmware under **About the Headphones**;
+- check the battery level in the menu's header, and the firmware, codec and protocol under **About the Headphones**;
 - turn **Launch at Login**, **Connect Automatically**, and **Reconnect Automatically** on or off under **SonyBridge Options**;
-- **Disconnect** (auto-reconnect stays off until the headset reconnects on its own or you click **Connect…** again) or **Quit SonyBridge** (⌘Q).
+- **Disconnect** (SonyBridge then stays disconnected until you click **Connect…** again or — with **Connect Automatically** on — the headset reconnects to your Mac) or **Quit SonyBridge** (⌘Q).
 
 ## 🎧 Supported headphones
 
 | Status | Devices |
 |--------|---------|
-| ✅ **Verified** | WH-CH720N, Sony ULT WEAR (WH-ULT900N) |
-| 🟢 **Expected** (v2, over-ear — NC/Ambient/battery/EQ) | WH-1000XM5, WH-1000XM6, WH-XB910N, WH-CH520 |
+| ✅ **Verified** | WH-CH720N, Sony ULT WEAR (WH-ULT900N), WH-1000XM6 |
+| 🟢 **Expected** (v2, over-ear — NC/Ambient/battery/EQ) | WH-1000XM5, WH-XB910N, WH-CH520 |
 | 🟡 **v2 earbuds** (controls work; battery format differs) | WF-1000XM4, WF-1000XM5, WF-C700N, LinkBuds S |
 | 🔵 **Legacy** (v1 protocol — NC/Ambient only) | WH-1000XM4, WH-1000XM3, WH-1000XM2, WH-XB900N, MDR-XB950BT |
 
-> Only the WH-CH720N is fully hardware-verified. Others share the same protocol family, so the basics
-> should work — per-model quirks are untested. Reports and PRs for other devices are very welcome.
+> The Verified models are hardware-tested. Others share the same protocol family, so the basics should
+> work — per-model quirks are untested. Reports and PRs for other devices are very welcome.
 >
-> On the **WH-1000XM6**, everything works as listed above except changing the equalizer in Manual mode
-> (reading its 10-band equalizer already works) — that's coming in a later update.
+> On the **WH-1000XM6**, changing the equalizer (presets and Manual) is coming in a later update (reading
+> its 10-band equalizer already works).
 
 ## 🚀 Build from source
 
 Requires the **Xcode Command Line Tools** (`xcode-select --install`) — the full Xcode app is not needed.
 
 ```sh
-git clone https://github.com/AmitRajput-Dev/SonyBridge.git
+git clone https://github.com/flotttt/SonyBridge.git
 cd SonyBridge
 make              # debug build → build/SonyBridge.app
 make run          # builds and launches the app (add DEBUG=1 to log every protocol frame)
@@ -153,10 +151,11 @@ Sony headphones expose a vendor RFCOMM/SPP service. Commands are framed as:
 
 Two protocol generations exist, distinguished by their SDP service UUID:
 
-- **v1** — `96CC203E-…` — WH-1000XM3 and older
-- **v2** — `956C7B26-…` — WH-CH720N, Sony ULT WEAR, XM4/XM5, WF-series, LinkBuds…
+- **v1** — `96CC203E-…` — WH-1000XM4 and older (WH-1000XM3, WH-1000XM2, WH-XB900N…)
+- **v2** — `956C7B26-…` — WH-CH720N, Sony ULT WEAR, WH-1000XM5/XM6, WF-series, LinkBuds…
 
-SonyBridge tries v1 first, falls back to v2, and remembers which succeeded. The v2 path adds the mandatory
+On every connect, SonyBridge looks for the v1 service first and falls back to v2 (it probes again each
+time rather than remembering the result). The v2 path adds the mandatory
 init handshake and per-frame host-ACK the newer devices require, plus battery, EQ and DSEE inquiry commands.
 Protocol byte layouts were cross-referenced against
 [**GadgetBridge**](https://codeberg.org/Freeyourgadget/Gadgetbridge)'s Sony implementation.
@@ -173,14 +172,15 @@ Protocol byte layouts were cross-referenced against
 
 Contributions are very welcome — especially **device reports** and **testing on real hardware**.
 
-- 🐛 **Found a bug / have a device to report?** [Open an issue](https://github.com/AmitRajput-Dev/SonyBridge/issues/new) with your model and what happened.
-- 🧪 **Want to test?** Grab a [release](https://github.com/AmitRajput-Dev/SonyBridge/releases) and tell us how it behaves on your headset (a screenshot helps a lot).
+- 🐛 **Found a bug / have a device to report?** [Open an issue](https://github.com/flotttt/SonyBridge/issues/new) with your model and what happened.
+- 🧪 **Want to test?** Build it from source (`make install`) and tell us how it behaves on your headset (a screenshot helps a lot).
 - 🔧 **Code?** Fork, branch, and open a PR against `main`. CI builds the macOS app on every PR.
 
 ## 🙏 Credits
 
 SonyBridge builds directly on the work of:
 
+- [**SonyBridge**](https://github.com/AmitRajput-Dev/SonyBridge) by AmitRajput-Dev — the original SonyBridge project this fork builds on
 - [**SonyHeadphonesClient**](https://github.com/Plutoberth/SonyHeadphonesClient) by Plutoberth, Mr-M33533K5 &amp; contributors — the original cross-platform client and protocol foundation
 - [**semvis123**](https://github.com/semvis123) — the original macOS port
 - [**GadgetBridge**](https://codeberg.org/Freeyourgadget/Gadgetbridge) — reverse-engineered v2 protocol reference

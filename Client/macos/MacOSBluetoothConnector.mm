@@ -147,6 +147,11 @@ void MacOSBluetoothConnector::connectToMac(MacOSBluetoothConnector* macOSBluetoo
 void MacOSBluetoothConnector::connect(const std::string& addrStr){
     // A previous link's thread has stopped (markClosed) but may not have been joined yet.
     if (uthread.joinable()) uthread.join();
+    {
+        // Bytes the previous link received but nobody read must not be replayed into the new session.
+        std::lock_guard<std::mutex> g(receiveDataMutex);
+        receivedBytes.clear();
+    }
     // convert mac address to nsstring
     NSString *addressNSString = [NSString stringWithCString:addrStr.c_str() encoding:[NSString defaultCStringEncoding]];
     // get device based on mac address

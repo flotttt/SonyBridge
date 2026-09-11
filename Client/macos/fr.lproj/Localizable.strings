@@ -27,7 +27,7 @@
 "Speech" = "Parole";
 "Manual" = "Manuel";
 "Custom" = "Personnalisé";
-"Manual equalizer coming soon for this model" = "Égaliseur manuel bientôt disponible pour ce modèle";
+"Equalizer changes coming soon for this model" = "Réglage de l’égaliseur bientôt disponible pour ce modèle";
 "Reset" = "Réinitialiser";
 "DSEE" = "DSEE";
 "Speak-to-Chat" = "Speak-to-Chat";
@@ -55,3 +55,5 @@
 "Not connected." = "Non connecté.";
 "Equalizer control isn't supported on this device yet." = "Le réglage de l’égaliseur n’est pas encore pris en charge sur cet appareil.";
 "Not supported on this device." = "Non pris en charge sur cet appareil.";
+"The headphones didn't respond." = "Le casque n’a pas répondu.";
+"Couldn't open the control channel." = "Impossible d’ouvrir le canal de contrôle.";

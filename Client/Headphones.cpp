@@ -76,18 +76,32 @@ int Headphones::getVptType()
 	return this->_vptType.current;
 }
 
+bool Headphones::isV2()
+{
+	return this->_conn.getProtocolVersion() == SonyProtocolVersion::V2;
+}
+
 void Headphones::initDevice()
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// v2 devices expect an init handshake before they answer GET inquiries. Best-effort: the reply
 	// (INIT_REPLY, 8 bytes on v2) is ignored here - we only need the device to enter the ready state.
 	this->_conn.sendCommandAndReadResponse(
 		{ (char)V2Command::INIT_REQUEST, 0x00 },
 		V2Command::INIT_REPLY
 	);
+	this->_initialized = true;
+}
+
+bool Headphones::isInitialized()
+{
+	return this->_initialized;
 }
 
 void Headphones::requestBattery()
 {
+	// CRITICAL: 0x22 is POWER_OFF on v1 - never send it on a v1 link (see Headphones.h).
+	if (!this->isV2()) return;
 	// Single battery (over-ear and most models): GET 22 00 -> RET 23 00 <level> <charging>
 	try {
 		auto resp = this->_conn.sendCommandAndReadResponse({ (char)V2Command::BATTERY_GET, 0x00 }, V2Command::BATTERY_RET, 0x00);
@@ -112,6 +126,8 @@ void Headphones::requestBattery()
 	}
 
 	// TWS earbuds: dual L/R (22 09 -> 23 09 <Llvl> <Lchg> <Rlvl> <Rchg>) and case (22 0a -> 23 0a <lvl> <chg>).
+	// Re-check the live link before each 0x22 frame: any 0x22 is POWER_OFF on v1, whatever the subtype.
+	if (!this->isV2()) return;
 	try {
 		auto resp = this->_conn.sendCommandAndReadResponse({ (char)V2Command::BATTERY_GET, 0x09 }, V2Command::BATTERY_RET, 0x09);
 		if (resp.size() >= 6) {
@@ -123,6 +139,7 @@ void Headphones::requestBattery()
 		}
 	} catch (...) {}
 
+	if (!this->isV2()) return;
 	try {
 		auto resp = this->_conn.sendCommandAndReadResponse({ (char)V2Command::BATTERY_GET, 0x0a }, V2Command::BATTERY_RET, 0x0a);
 		if (resp.size() >= 4) {
@@ -149,6 +166,7 @@ int Headphones::getBatteryCase() { return this->_batteryCase; }
 
 void Headphones::requestEqualizer()
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// GET: 56 00 -> RET: 57 00 <preset> <count> <values...> (decoded by ProtocolParsers::parseEqualizer)
 	auto resp = this->_conn.sendCommandAndReadResponse({ (char)V2Command::EQ_GET, 0x00 }, V2Command::EQ_RET);
 	if (auto eq = ProtocolParsers::parseEqualizer(resp))
@@ -174,6 +192,7 @@ EQ_PRESET Headphones::getEqualizerPreset()
 
 void Headphones::setEqualizerPreset(EQ_PRESET preset)
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// SET preset: 58 00 <preset> 00
 	this->_conn.sendCommand({
 		(char)V2Command::EQ_SET,
@@ -187,6 +206,7 @@ void Headphones::setEqualizerPreset(EQ_PRESET preset)
 
 void Headphones::setEqualizerCustom(int clearBass, const std::vector<int>& bands)
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// SET custom: 58 00 A0 06 <clearBass+10> <b1..b5 +10>  (0xA0 = MANUAL preset; values clamped to [-10,10])
 	auto clamp = [](int v) { return (char)(unsigned char)(std::max(-10, std::min(10, v)) + 10); };
 	Buffer cmd = {
@@ -220,6 +240,7 @@ int Headphones::getEqualizerBand(int index)
 
 void Headphones::requestDsee()
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// GET: e6 01  ->  RET: e7 01 <enabled 0/1>
 	auto resp = this->_conn.sendCommandAndReadResponse(
 		{ (char)V2Command::DSEE_GET, 0x01 },
@@ -229,7 +250,13 @@ void Headphones::requestDsee()
 	{
 		std::lock_guard guard(this->_propertyMtx);
 		this->_dsee = resp[2] != 0;
+		this->_hasDsee = true;
 	}
+}
+
+bool Headphones::hasDsee()
+{
+	return this->_hasDsee;
 }
 
 bool Headphones::getDsee()
@@ -239,6 +266,7 @@ bool Headphones::getDsee()
 
 void Headphones::setDsee(bool enabled)
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// SET: e8 01 <enabled 0/1>
 	this->_conn.sendCommand({
 		(char)V2Command::DSEE_SET,
@@ -283,6 +311,7 @@ void Headphones::probeNcAsmInquiryType()
 {
 	// The WH-1000XM6 answers the legacy 0x17 inquiry with all zeros and reports its real state on 0x19.
 	// Setting the mode still goes through 68 17, which the XM6 accepts.
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	try
 	{
 		auto resp = this->_conn.sendCommandAndReadResponse({ 0x66, 0x19 }, 0x67, 0x19);
@@ -327,26 +356,32 @@ void Headphones::probeCapabilities()
 {
 	// Each GET is best-effort: an unsupported feature times out (recv timeout -> throw) and stays unsupported,
 	// so we never expose or send a command the device can't handle.
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	try {
 		auto r = this->_conn.sendCommandAndReadResponse({ (char)V2Command::FW_GET, 0x02 }, V2Command::FW_RET);
 		if (r.size() > 3) { std::lock_guard g(this->_propertyMtx); this->_firmware = std::string(r.begin() + 3, r.end()); this->_hasFirmware = true; }
 	} catch (...) {}
 
+	// The live link is re-checked before each probe: this sequence can take ~12 s to time out.
+	if (!this->isV2()) return;
 	try {
 		auto r = this->_conn.sendCommandAndReadResponse({ (char)V2Command::CODEC_GET, 0x02 }, V2Command::CODEC_RET);
 		if (r.size() >= 3) { auto n = codecName((unsigned char)r[2]); if (!n.empty()) { std::lock_guard g(this->_propertyMtx); this->_codec = n; this->_hasCodec = true; } }
 	} catch (...) {}
 
+	if (!this->isV2()) return;
 	try {
 		auto r = this->_conn.sendCommandAndReadResponse({ (char)V2Command::APO_GET, 0x05 }, V2Command::APO_RET);
 		if (r.size() >= 4) { std::lock_guard g(this->_propertyMtx); this->_autoPowerOff = apoIndexFromCode((unsigned char)r[2], (unsigned char)r[3]); this->_hasAutoPowerOff = true; }
 	} catch (...) {}
 
+	if (!this->isV2()) return;
 	try {
 		auto r = this->_conn.sendCommandAndReadResponse({ (char)V2Command::BTNMODE_GET, (char)V2Command::SUB_ADAPTIVE_VOLUME }, V2Command::BTNMODE_RET, V2Command::SUB_ADAPTIVE_VOLUME);
 		if (r.size() >= 3) { std::lock_guard g(this->_propertyMtx); this->_adaptiveVolume = (r[2] == 0); this->_hasAdaptiveVolume = true; }
 	} catch (...) {}
 
+	if (!this->isV2()) return;
 	try {
 		auto r = this->_conn.sendCommandAndReadResponse({ (char)V2Command::BTNMODE_GET, (char)V2Command::SUB_SPEAK_TO_CHAT }, V2Command::BTNMODE_RET, V2Command::SUB_SPEAK_TO_CHAT);
 		if (r.size() >= 3) { std::lock_guard g(this->_propertyMtx); this->_speakToChat = (r[2] == 0); this->_hasSpeakToChat = true; }
@@ -358,6 +393,7 @@ int Headphones::getAutoPowerOff() { return this->_autoPowerOff; }
 void Headphones::setAutoPowerOff(int index)
 {
 	if (index < 0 || index > 5) return;
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	this->_conn.sendCommand({ (char)V2Command::APO_SET, 0x05, (char)APO_CODES[index].first, (char)APO_CODES[index].second });
 	std::lock_guard guard(this->_propertyMtx);
 	this->_autoPowerOff = index;
@@ -372,6 +408,7 @@ bool Headphones::hasSpeakToChat() { return this->_hasSpeakToChat; }
 bool Headphones::getSpeakToChat() { return this->_speakToChat; }
 void Headphones::setSpeakToChat(bool enabled)
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// SET: f8 0c <enabled? 0:1> 01  (enable bit is inverted on v2)
 	this->_conn.sendCommand({ (char)V2Command::BTNMODE_SET, (char)V2Command::SUB_SPEAK_TO_CHAT, (char)(enabled ? 0x00 : 0x01), 0x01 });
 	std::lock_guard guard(this->_propertyMtx);
@@ -382,6 +419,7 @@ bool Headphones::hasAdaptiveVolume() { return this->_hasAdaptiveVolume; }
 bool Headphones::getAdaptiveVolume() { return this->_adaptiveVolume; }
 void Headphones::setAdaptiveVolume(bool enabled)
 {
+	if (!this->isV2()) return; // v2-only (see Headphones.h)
 	// SET: f8 0a <enabled? 0:1>  (inverted)
 	this->_conn.sendCommand({ (char)V2Command::BTNMODE_SET, (char)V2Command::SUB_ADAPTIVE_VOLUME, (char)(enabled ? 0x00 : 0x01) });
 	std::lock_guard guard(this->_propertyMtx);

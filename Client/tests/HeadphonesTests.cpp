@@ -68,6 +68,7 @@ static void testTransientBatteryTimeoutKeepsSingleBattery()
 {
 	auto fakeOwned = std::make_unique<FakeBluetoothConnector>();
 	FakeBluetoothConnector* fake = fakeOwned.get();
+	fake->protocolVersion = SonyProtocolVersion::V2; // the WH-1000XM6 is a v2 device
 	BluetoothWrapper wrapper(std::move(fakeOwned));
 	Headphones phones(wrapper);
 
@@ -100,6 +101,7 @@ static void testTwsDeviceWithNoSingleBatteryStillProbes()
 {
 	auto fakeOwned = std::make_unique<SelectiveFakeConnector>();
 	SelectiveFakeConnector* fake = fakeOwned.get();
+	fake->protocolVersion = SonyProtocolVersion::V2; // TWS earbuds are v2 devices
 	BluetoothWrapper wrapper(std::move(fakeOwned));
 	Headphones phones(wrapper);
 
@@ -111,10 +113,101 @@ static void testTwsDeviceWithNoSingleBatteryStillProbes()
 	CHECK(phones.hasDualBattery() == true);
 }
 
+// Safety (final review I1): on a v1 link the v2-only inquiries and setters must send nothing at all. Opcode
+// 0x22 (BATTERY_GET on v2) is POWER_OFF on v1 - a stale session's queued read landing on a v1 headset
+// (e.g. WH-1000XM4) connected right after would power it off.
+static void testV1ConnectionSendsNoV2OnlyFrame()
+{
+	auto fakeOwned = std::make_unique<FakeBluetoothConnector>();
+	FakeBluetoothConnector* fake = fakeOwned.get();
+	fake->protocolVersion = SonyProtocolVersion::V1;
+	BluetoothWrapper wrapper(std::move(fakeOwned));
+	Headphones phones(wrapper);
+
+	// Each call must return (or throw) without having sent a single frame.
+	auto sendsNothing = [&](const char* name, auto&& call) {
+		fake->sentFrames.clear();
+		try { call(); } catch (...) {}
+		if (!fake->sentFrames.empty()) std::printf("  %s sent %zu frame(s) on a v1 link\n", name, fake->sentFrames.size());
+		CHECK(fake->sentFrames.empty());
+	};
+	sendsNothing("requestBattery", [&] { phones.requestBattery(); });
+	sendsNothing("requestEqualizer", [&] { phones.requestEqualizer(); });
+	sendsNothing("requestDsee", [&] { phones.requestDsee(); });
+	sendsNothing("initDevice", [&] { phones.initDevice(); });
+	sendsNothing("probeNcAsmInquiryType", [&] { phones.probeNcAsmInquiryType(); });
+	sendsNothing("probeCapabilities", [&] { phones.probeCapabilities(); });
+	sendsNothing("setEqualizerPreset", [&] { phones.setEqualizerPreset(EQ_PRESET::OFF); });
+	sendsNothing("setEqualizerCustom", [&] { phones.setEqualizerCustom(0, { 0, 0, 0, 0, 0 }); });
+	sendsNothing("setDsee", [&] { phones.setDsee(true); });
+	sendsNothing("setAutoPowerOff", [&] { phones.setAutoPowerOff(1); });
+	sendsNothing("setSpeakToChat", [&] { phones.setSpeakToChat(true); });
+	sendsNothing("setAdaptiveVolume", [&] { phones.setAdaptiveVolume(true); });
+
+	CHECK(!phones.isInitialized());
+	CHECK(!phones.hasDsee());
+	CHECK(phones.getBatteryLevel() == -1);
+}
+
+// A link that turns v1 right after the first frame goes out - models a v1 headset connected on the same
+// BluetoothWrapper while a stale multi-frame call (battery TWS probes, capability probes) is still running.
+class FlipsToV1AfterFirstSend : public FakeBluetoothConnector
+{
+public:
+	int send(char* buf, size_t length) noexcept(false) override
+	{
+		int sent = FakeBluetoothConnector::send(buf, length);
+		this->protocolVersion = SonyProtocolVersion::V1;
+		return sent;
+	}
+};
+
+// The live protocol is re-checked before every v2-only frame, not only on entry: 22 09 / 22 0a are
+// POWER_OFF on v1 too (the opcode, 0x22, is what matters).
+static void testLinkTurningV1MidCallStopsSending()
+{
+	auto onlyFirstFrameSent = [](const char* name, auto&& call) {
+		auto fakeOwned = std::make_unique<FlipsToV1AfterFirstSend>();
+		FlipsToV1AfterFirstSend* fake = fakeOwned.get();
+		fake->protocolVersion = SonyProtocolVersion::V2;
+		BluetoothWrapper wrapper(std::move(fakeOwned));
+		Headphones phones(wrapper);
+		try { call(phones); } catch (...) {}
+		if (fake->sentFrames.size() != 1) std::printf("  %s sent %zu frame(s), expected 1\n", name, fake->sentFrames.size());
+		CHECK(fake->sentFrames.size() == 1);
+	};
+	onlyFirstFrameSent("requestBattery", [](Headphones& p) { p.requestBattery(); });
+	onlyFirstFrameSent("probeCapabilities", [](Headphones& p) { p.probeCapabilities(); });
+}
+
+// A v2 device that answers the handshake is marked initialized (per Headphones object = per session), and one
+// that answers the DSEE inquiry reports the capability.
+static void testV2InitAndDseeCapability()
+{
+	auto fakeOwned = std::make_unique<SelectiveFakeConnector>();
+	SelectiveFakeConnector* fake = fakeOwned.get();
+	fake->protocolVersion = SonyProtocolVersion::V2;
+	BluetoothWrapper wrapper(std::move(fakeOwned));
+	Headphones phones(wrapper);
+
+	CHECK(!phones.isInitialized());
+	CHECK(!phones.hasDsee());
+	fake->scriptReplyTo(V2Command::INIT_REQUEST, 0x00, { V2Command::INIT_REPLY, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
+	fake->scriptReplyTo(V2Command::DSEE_GET, 0x01, { V2Command::DSEE_RET, 0x01, 0x01 });
+	phones.initDevice();
+	phones.requestDsee();
+	CHECK(phones.isInitialized());
+	CHECK(phones.hasDsee());
+	CHECK(phones.getDsee());
+}
+
 int main()
 {
 	testTransientBatteryTimeoutKeepsSingleBattery();
 	testTwsDeviceWithNoSingleBatteryStillProbes();
+	testV1ConnectionSendsNoV2OnlyFrame();
+	testLinkTurningV1MidCallStopsSending();
+	testV2InitAndDseeCapability();
 
 	if (failures) { std::printf("HeadphonesTests: %d failure(s)\n", failures); return 1; }
 	std::printf("HeadphonesTests: all passed\n");
