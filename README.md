@@ -9,8 +9,6 @@
 <br/>
 
 [![Build](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/build.yml/badge.svg)](https://github.com/AmitRajput-Dev/SonyBridge/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/AmitRajput-Dev/SonyBridge?include_prereleases&sort=semver)](https://github.com/AmitRajput-Dev/SonyBridge/releases)
-[![Stars](https://img.shields.io/github/stars/AmitRajput-Dev/SonyBridge?style=flat)](https://github.com/AmitRajput-Dev/SonyBridge/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platform-macOS-blue)
 
@@ -41,7 +39,7 @@ menu bar app, built with AppKit/SwiftUI.
 ## ✨ Features
 
 **Sound modes**
-- 🎚️ **Ambient Sound Control** — Noise Cancelling · Ambient Sound (with a 1–20 level slider and a Focus on Voice switch) · Off
+- 🎚️ **Ambient Sound Control** — Noise Cancelling · Ambient Sound (with a 1–20 level slider (1–19 on older models) and a Focus on Voice switch) · Off
 - 🔄 **Live button sync** — following the headset's own NC button live, even while the menu is open
 
 **Equalizer**
@@ -112,16 +110,16 @@ From the menu you can:
 
 | Status | Devices |
 |--------|---------|
-| ✅ **Verified** | WH-CH720N, Sony ULT WEAR (WH-ULT900N) |
-| 🟢 **Expected** (v2, over-ear — NC/Ambient/battery/EQ) | WH-1000XM5, WH-1000XM6, WH-XB910N, WH-CH520 |
+| ✅ **Verified** | WH-CH720N, Sony ULT WEAR (WH-ULT900N), WH-1000XM6 |
+| 🟢 **Expected** (v2, over-ear — NC/Ambient/battery/EQ) | WH-1000XM5, WH-XB910N, WH-CH520 |
 | 🟡 **v2 earbuds** (controls work; battery format differs) | WF-1000XM4, WF-1000XM5, WF-C700N, LinkBuds S |
 | 🔵 **Legacy** (v1 protocol — NC/Ambient only) | WH-1000XM4, WH-1000XM3, WH-1000XM2, WH-XB900N, MDR-XB950BT |
 
-> Only the WH-CH720N is fully hardware-verified. Others share the same protocol family, so the basics
-> should work — per-model quirks are untested. Reports and PRs for other devices are very welcome.
+> The Verified models are hardware-tested. Others share the same protocol family, so the basics should
+> work — per-model quirks are untested. Reports and PRs for other devices are very welcome.
 >
-> On the **WH-1000XM6**, everything works as listed above except changing the equalizer in Manual mode
-> (reading its 10-band equalizer already works) — that's coming in a later update.
+> On the **WH-1000XM6**, changing the equalizer in Manual mode is coming in a later update (reading its
+> 10-band equalizer already works).
 
 ## 🚀 Build from source
 
@@ -174,7 +172,7 @@ Protocol byte layouts were cross-referenced against
 Contributions are very welcome — especially **device reports** and **testing on real hardware**.
 
 - 🐛 **Found a bug / have a device to report?** [Open an issue](https://github.com/AmitRajput-Dev/SonyBridge/issues/new) with your model and what happened.
-- 🧪 **Want to test?** Grab a [release](https://github.com/AmitRajput-Dev/SonyBridge/releases) and tell us how it behaves on your headset (a screenshot helps a lot).
+- 🧪 **Want to test?** Build it from source (`make install`) and tell us how it behaves on your headset (a screenshot helps a lot).
 - 🔧 **Code?** Fork, branch, and open a PR against `main`. CI builds the macOS app on every PR.
 
 ## 🙏 Credits
