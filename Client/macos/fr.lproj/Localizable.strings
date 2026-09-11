@@ -44,6 +44,10 @@
 "Codec" = "Codec";
 "Protocol" = "Protocole";
 "Bluetooth" = "Bluetooth";
+"SonyBridge Options" = "Options de SonyBridge";
+"Launch at Login" = "Lancer à l’ouverture de session";
+"Connect Automatically" = "Connexion automatique";
+"Reconnect Automatically" = "Reconnexion automatique";
 
 /* Errors (HeadphonesBridge.mm, HeadphonesModel.swift) */
 "No connected Sony headset found. Connect your headphones in macOS Bluetooth settings first." = "Aucun casque Sony connecté. Connectez d’abord votre casque dans les réglages Bluetooth de macOS.";

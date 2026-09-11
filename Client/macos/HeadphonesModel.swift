@@ -56,10 +56,19 @@ final class HeadphonesModel: ObservableObject {
     private var levelThrottle = SendThrottle()
     private var eqThrottle = SendThrottle()
 
+    // Set by AppDelegate; nil means "no automatic behaviour".
+    var settings: AppSettings?
+    private var reconnectPolicy = ReconnectPolicy()
+    private var reconnectTimer: Timer?
+    private var reconnectAddress: String?
+    private var userDisconnected = false // after "Déconnecter": no auto-reconnect until the headset reconnects to macOS
+
     // MARK: - Connection
 
     // User-initiated: uses the already-connected Sony headset, else the macOS Bluetooth picker.
     func connect() {
+        userDisconnected = false
+        cancelReconnect()
         connectionState = .connecting
         errorMessage = nil
         // Defer so the menu can show "Connecting…" before a modal picker blocks the main thread.
@@ -71,6 +80,8 @@ final class HeadphonesModel: ObservableObject {
     }
 
     func disconnect() {
+        userDisconnected = true
+        cancelReconnect()
         stopTimers()
         bridge.disconnect()
         connectionState = .disconnected
@@ -80,18 +91,88 @@ final class HeadphonesModel: ObservableObject {
         guard ok else {
             connectionState = .disconnected
             if userInitiated, let error = error { errorMessage = error }
+            if !userInitiated && reconnectAddress != nil {
+                // Only keep retrying while the option is still on; the user may have turned it off meanwhile.
+                if settings?.autoReconnect == true { scheduleReconnect() } else { cancelReconnect() }
+            }
             return
         }
+        cancelReconnect()
         connectionState = .connected
         syncFromBridge()
+        settings?.lastDeviceAddress = deviceMac
         bridge.refreshStatus { [weak self] in self?.syncFromBridge() } // called after reads, then after probes
         startTimers()
     }
 
-    // The control link dropped on its own (idle power-save). Task 7 adds the automatic reconnection here.
+    // The control link dropped on its own (idle power-save): retry while the headset is still connected to macOS.
     func linkLost() {
         stopTimers()
+        bridge.disconnect() // resets sequence numbers and buffers for the next connection
         connectionState = .disconnected
+        guard settings?.autoReconnect == true, !userDisconnected, !deviceMac.isEmpty else { return }
+        reconnectAddress = deviceMac
+        scheduleReconnect()
+    }
+
+    // MARK: - Automatic connection
+
+    // Not user-initiated: failures stay silent (normal while the headset sleeps).
+    func autoConnect(toAddress address: String) {
+        guard connectionState == .disconnected else { return }
+        connectionState = .connecting
+        bridge.connect(toAddress: address) { ok, error in
+            self.handleConnectResult(ok: ok, error: error, userInitiated: false)
+        }
+    }
+
+    // At launch: the last headset if macOS has it connected, else any connected Sony headset.
+    func autoConnectOnLaunch() {
+        let remembered = settings?.lastDeviceAddress.flatMap { HeadphonesBridge.isDeviceConnectedToMac($0) ? $0 : nil }
+        if let address = remembered ?? HeadphonesBridge.connectedSonyHeadsetAddress() {
+            autoConnect(toAddress: address)
+        }
+    }
+
+    // DeviceWatcher: a device just connected to macOS.
+    func headsetConnectedToMac(address: String, name: String) {
+        guard settings?.autoConnect == true, HeadphonesBridge.looksLikeSonyHeadset(name),
+              connectionState == .disconnected else { return }
+        userDisconnected = false
+        cancelReconnect()
+        // Give the audio link ~2 s to settle before opening the control channel.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self = self else { return }
+            // The option or the device's own connection may have changed during the delay; re-check both.
+            guard self.settings?.autoConnect == true, HeadphonesBridge.isDeviceConnectedToMac(address) else { return }
+            self.autoConnect(toAddress: address)
+        }
+    }
+
+    // DeviceWatcher: a device left macOS; stop retrying it (headsetConnectedToMac takes over when it's back).
+    func headsetDisconnectedFromMac(address: String) {
+        if address == reconnectAddress { cancelReconnect() }
+    }
+
+    func cancelReconnect() {
+        reconnectTimer?.invalidate()
+        reconnectTimer = nil
+        reconnectAddress = nil
+        reconnectPolicy.reset()
+    }
+
+    private func scheduleReconnect() {
+        guard let address = reconnectAddress else { return }
+        reconnectTimer?.invalidate()
+        let timer = Timer(timeInterval: reconnectPolicy.nextDelay(), repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            // The user may have turned the option off while this attempt was pending.
+            guard self.settings?.autoReconnect == true else { self.cancelReconnect(); return }
+            guard HeadphonesBridge.isDeviceConnectedToMac(address) else { self.cancelReconnect(); return }
+            self.autoConnect(toAddress: address)
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        reconnectTimer = timer
     }
 
     // MARK: - Actions

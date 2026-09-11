@@ -22,6 +22,8 @@ public:
     virtual void disconnect() noexcept;
     virtual bool isConnected() noexcept;
     virtual void closeConnection();
+    // Called from the channel-closed callback, on the connector thread: stops that thread's loop without joining it.
+    void markClosed() noexcept;
     virtual SonyProtocolVersion getProtocolVersion() noexcept;
 
     virtual std::vector<BluetoothDevice> getConnectedDevices() noexcept(false);
@@ -36,7 +38,7 @@ public:
     SonyProtocolVersion protocolVersion = SonyProtocolVersion::V1;
 
 private:
-    void *rfcommDevice;
-    void *rfcommchannel;
+    void *rfcommDevice = nullptr;
+    void *rfcommchannel = nullptr;
     std::thread uthread;
 };

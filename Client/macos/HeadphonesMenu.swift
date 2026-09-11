@@ -6,6 +6,7 @@ import Combine
 final class HeadphonesMenu {
     let menu = NSMenu()
     private let model: HeadphonesModel
+    private let settings: AppSettings
     private var cancellables = Set<AnyCancellable>()
 
     private let errorItem = NSMenuItem()
@@ -25,6 +26,9 @@ final class HeadphonesMenu {
     private let aboutMenu = NSMenu()
     private var aboutValues: [String] = []  // cache to avoid rebuilding About menu on every slider drag
     private var connectItem = NSMenuItem()
+    private var launchAtLoginItem = NSMenuItem()
+    private var autoConnectItem = NSMenuItem()
+    private var autoReconnectItem = NSMenuItem()
 
     private static var presets: [(Int, String)] {
         [(0x00, tr("Off")), (0x10, tr("Bright")), (0x11, tr("Excited")), (0x12, tr("Mellow")),
@@ -47,8 +51,9 @@ final class HeadphonesMenu {
         return options
     }
 
-    init(model: HeadphonesModel) {
+    init(model: HeadphonesModel, settings: AppSettings) {
         self.model = model
+        self.settings = settings
         menu.autoenablesItems = false
         menu.minimumWidth = MenuMetrics.width
 
@@ -64,6 +69,10 @@ final class HeadphonesMenu {
 
         // objectWillChange fires before the new value is stored; hopping to the main queue reads the new state.
         model.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.update() }
+            .store(in: &cancellables)
+        settings.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.update() }
             .store(in: &cancellables)
@@ -142,6 +151,15 @@ final class HeadphonesMenu {
         aboutMenu.autoenablesItems = false
         aboutItem.submenu = aboutMenu
         menu.addItem(aboutItem)
+        let optionsMenu = NSMenu()
+        optionsMenu.autoenablesItems = false
+        launchAtLoginItem = ActionMenuItem(tr("Launch at Login")) { [weak self] in self?.toggleLaunchAtLogin() }
+        autoConnectItem = ActionMenuItem(tr("Connect Automatically")) { [weak settings] in settings?.autoConnect.toggle() }
+        autoReconnectItem = ActionMenuItem(tr("Reconnect Automatically")) { [weak settings] in settings?.autoReconnect.toggle() }
+        for item in [launchAtLoginItem, autoConnectItem, autoReconnectItem] { optionsMenu.addItem(item) }
+        let optionsItem = NSMenuItem(title: tr("SonyBridge Options"), action: nil, keyEquivalent: "")
+        optionsItem.submenu = optionsMenu
+        menu.addItem(optionsItem)
         connectItem = ActionMenuItem(tr("Connect…")) { [weak self] in self?.toggleConnection() }
         menu.addItem(connectItem)
         menu.addItem(.separator())
@@ -196,6 +214,10 @@ final class HeadphonesMenu {
         case .disconnected: connectItem.title = tr("Connect…")
         }
         connectItem.isEnabled = model.connectionState != .connecting
+
+        launchAtLoginItem.state = settings.launchAtLogin ? .on : .off
+        autoConnectItem.state = settings.autoConnect ? .on : .off
+        autoReconnectItem.state = settings.autoReconnect ? .on : .off
     }
 
     private func updateAbout() {
@@ -219,6 +241,10 @@ final class HeadphonesMenu {
 
     private static func presetName(_ code: Int) -> String {
         presets.first { $0.0 == code }?.1 ?? tr("Custom")
+    }
+
+    private func toggleLaunchAtLogin() {
+        if let error = settings.setLaunchAtLogin(!settings.launchAtLogin) { model.showError(error) }
     }
 
     private func toggleConnection() {

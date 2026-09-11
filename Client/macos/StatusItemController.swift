@@ -7,8 +7,8 @@ final class StatusItemController {
     private let headphonesMenu: HeadphonesMenu
     private var cancellables = Set<AnyCancellable>()
 
-    init(model: HeadphonesModel) {
-        headphonesMenu = HeadphonesMenu(model: model)
+    init(model: HeadphonesModel, settings: AppSettings) {
+        headphonesMenu = HeadphonesMenu(model: model, settings: settings)
         statusItem.menu = headphonesMenu.menu
         model.$connectionState.combineLatest(model.$mode)
             .receive(on: DispatchQueue.main)

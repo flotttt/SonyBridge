@@ -62,6 +62,16 @@ typedef NS_ENUM(NSInteger, SHCAmbientMode) {
 // completion is called on the main thread.
 - (void)scanAndConnectWithCompletion:(void (^)(BOOL ok, NSString * _Nullable error))completion;
 
+// Name heuristic for Sony headsets (WH-/WF-/WI-/MDR-/XB/LinkBuds).
++ (BOOL)looksLikeSonyHeadset:(NSString *)name NS_SWIFT_NAME(looksLikeSonyHeadset(_:));
+// Address of the first Sony headset currently connected to macOS, or nil.
++ (nullable NSString *)connectedSonyHeadsetAddress NS_SWIFT_NAME(connectedSonyHeadsetAddress());
+// YES if the device with this address is connected to macOS (its audio link is up).
++ (BOOL)isDeviceConnectedToMac:(NSString *)address NS_SWIFT_NAME(isDeviceConnectedToMac(_:));
+// Opens the control channel to a specific device, without the picker. Completion on the main thread.
+- (void)connectToAddress:(NSString *)address
+              completion:(void (^)(BOOL ok, NSString * _Nullable error))completion NS_SWIFT_NAME(connect(toAddress:completion:));
+
 - (void)disconnect;
 
 // Pushes the desired ambient/NC state to the device on a background thread; completion on main thread.
