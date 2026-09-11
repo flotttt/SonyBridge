@@ -95,9 +95,21 @@ void Headphones::requestBattery()
 			std::lock_guard guard(this->_propertyMtx);
 			this->_batteryLevel = (unsigned char)resp[2];
 			this->_batteryCharging = resp[3] == 1;
+			this->_singleBatteryKnown = true;
+			this->_hasDualBattery = false;
 			return; // found a single battery; don't waste time probing the TWS types
 		}
-	} catch (...) {}
+	} catch (...) {
+		// A device whose 22 00 has already succeeded once shouldn't fall back to probing the TWS
+		// commands on a later transient timeout - that would wrongly flip _hasDualBattery to true
+		// and it's never reset afterwards. Keep the last known values and bail out.
+		// Read under the lock: requestBattery() can run concurrently (connect + the 60s poll each
+		// dispatch it), and _singleBatteryKnown is otherwise only ever written under _propertyMtx.
+		{
+			std::lock_guard guard(this->_propertyMtx);
+			if (this->_singleBatteryKnown) return;
+		}
+	}
 
 	// TWS earbuds: dual L/R (22 09 -> 23 09 <Llvl> <Lchg> <Rlvl> <Rchg>) and case (22 0a -> 23 0a <lvl> <chg>).
 	try {

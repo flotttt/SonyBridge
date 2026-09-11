@@ -22,7 +22,7 @@ struct AmbientLevelRow: View {
                 .frame(width: 20, alignment: .trailing)
         }
         .padding(.leading, MenuMetrics.indent)
-        .padding(.trailing, MenuMetrics.leading)
+        .padding(.trailing, MenuMetrics.trailing)
         .padding(.vertical, 2)
         .disabled(!model.connected)
     }

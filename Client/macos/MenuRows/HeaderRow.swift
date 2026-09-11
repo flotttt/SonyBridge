@@ -16,7 +16,8 @@ struct HeaderRow: View {
             Spacer(minLength: 8)
             if model.connected { battery }
         }
-        .padding(.horizontal, MenuMetrics.leading)
+        .padding(.leading, MenuMetrics.leading)
+        .padding(.trailing, MenuMetrics.trailing)
         .padding(.vertical, 4)
     }
 
@@ -33,11 +34,15 @@ struct HeaderRow: View {
             Text(dualBatteryText)
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
+                .lineLimit(1)
+                .fixedSize()
         } else if model.batteryLevel >= 0 {
             HStack(spacing: 4) {
                 Text(String(format: tr("%ld%%"), model.batteryLevel))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
                 Image(systemName: batterySymbol)
                     .foregroundColor(model.batteryLevel <= 20 && !model.batteryCharging ? .red : .secondary)
             }

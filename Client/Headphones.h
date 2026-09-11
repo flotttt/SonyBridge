@@ -102,6 +102,10 @@ private:
 	int _batteryLevel = -1;
 	bool _batteryCharging = false;
 	bool _hasDualBattery = false;
+	// Set once GET 22 00 succeeds. Guards requestBattery() against a later transient timeout on 22 00
+	// falling through to the TWS probes (22 09/22 0a), which would wrongly flip _hasDualBattery to true
+	// and never reset it - see requestBattery().
+	bool _singleBatteryKnown = false;
 	int _batteryLeft = -1;
 	int _batteryRight = -1;
 	int _batteryCase = -1;

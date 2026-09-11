@@ -215,18 +215,23 @@ static BOOL SHCLooksLikeSonyHeadset(NSString *name) {
     // per-call the connector mutex still serializes actual I/O.
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         // Fast, always-supported reads first, then update the UI immediately...
-        try {
-            if (!self->_initialized) {
-                hp->initDevice();
-                hp->probeNcAsmInquiryType();
-                self->_initialized = YES;
+        // Each read is independent: one lost frame (recv timeout) must not skip the others, or a fresh
+        // connection stays half-initialized (no battery, no EQ, NC/ASM polled on the wrong channel).
+        if (!self->_initialized) {
+            for (int attempt = 0; attempt < 2 && !self->_initialized; attempt++) {
+                try {
+                    hp->initDevice();
+                    self->_initialized = YES;
+                } catch (std::exception &exc) {}
             }
-            // Current NC/ASM state, on the channel probeNcAsmInquiryType() picked.
-            hp->requestAmbientState();
-            hp->requestBattery();
-            hp->requestEqualizer();
-            hp->requestDsee();
-        } catch (std::exception &exc) {}
+            // Probe even if init never answered, so the NC/ASM channel is still picked (catches internally).
+            hp->probeNcAsmInquiryType();
+        }
+        // Current NC/ASM state, on the channel probeNcAsmInquiryType() picked.
+        try { hp->requestAmbientState(); } catch (std::exception &exc) {}
+        try { hp->requestBattery(); } catch (std::exception &exc) {}
+        try { hp->requestEqualizer(); } catch (std::exception &exc) {}
+        try { hp->requestDsee(); } catch (std::exception &exc) {}
         dispatch_async(dispatch_get_main_queue(), ^{ completion(); });
 
         // ...then the optional-feature probes, which can each take a couple seconds to time out on a

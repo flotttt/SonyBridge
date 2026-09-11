@@ -12,6 +12,7 @@ final class HeadphonesMenu {
     private var modeItems: [(SHCAmbientMode, NSMenuItem)] = []
     private var ambientRows: [NSMenuItem] = []            // level slider + focus on voice
     private let equalizerItem = NSMenuItem()
+    private var equalizerRowItem = NSMenuItem()
     private var presetItems: [(Int, NSMenuItem)] = []
     private let equalizerNoteItem = NSMenuItem()
     private var equalizerResetItem = NSMenuItem()
@@ -32,13 +33,24 @@ final class HeadphonesMenu {
     }
 
     // Index = the bridge's auto power-off option (0=Off, 1=5 min, 2=30 min, 3=1 h, 4=3 h, 5=when taken off).
+    // Used for the submenu's item titles (long form).
     private static var autoPowerOffOptions: [String] {
         [tr("Off"), tr("5 min"), tr("30 min"), tr("1 hour"), tr("3 hours"), tr("When taken off")]
+    }
+
+    // Same options, but with a short last label - used for the value shown at the right of "Auto Power-Off"
+    // itself, since the full "Quand le casque est retiré" collides with the title (spec §4 shows a short
+    // value; the submenu keeps the long label).
+    private static var autoPowerOffShortOptions: [String] {
+        var options = autoPowerOffOptions
+        options[options.count - 1] = tr("Taken off")
+        return options
     }
 
     init(model: HeadphonesModel) {
         self.model = model
         menu.autoenablesItems = false
+        menu.minimumWidth = MenuMetrics.width
 
         menu.addItem(hostingMenuItem { HeaderRow(model: model) })
         errorItem.isEnabled = false
@@ -86,13 +98,15 @@ final class HeadphonesMenu {
     private func addSoundSection() {
         let equalizerMenu = NSMenu()
         equalizerMenu.autoenablesItems = false
+        equalizerMenu.minimumWidth = MenuMetrics.equalizerWidth
         for (code, title) in Self.presets {
             let item = ActionMenuItem(title) { [weak model] in model?.setEqualizerPreset(code) }
             presetItems.append((code, item))
             equalizerMenu.addItem(item)
         }
         equalizerMenu.addItem(.separator())
-        equalizerMenu.addItem(hostingMenuItem(width: MenuMetrics.equalizerWidth) { EqualizerRow(model: model) })
+        equalizerRowItem = hostingMenuItem(width: MenuMetrics.equalizerWidth) { EqualizerRow(model: model) }
+        equalizerMenu.addItem(equalizerRowItem)
         equalizerNoteItem.title = tr("Manual equalizer coming soon for this model")
         equalizerNoteItem.isEnabled = false
         equalizerMenu.addItem(equalizerNoteItem)
@@ -156,17 +170,19 @@ final class HeadphonesMenu {
             item.isEnabled = connected && model.equalizerWritable
         }
         equalizerNoteItem.isHidden = model.equalizerWritable || model.eqBands.isEmpty
+        equalizerRowItem.isHidden = model.eqBands.isEmpty
         equalizerResetItem.isEnabled = connected && model.equalizerWritable && model.eqPreset == 0xA0
 
         dseeItem.isHidden = !model.supportsEqualizer
         speakToChatItem.isHidden = !model.hasSpeakToChat
         adaptiveVolumeItem.isHidden = !model.hasAdaptiveVolume
 
-        let options = Self.autoPowerOffOptions
+        let shortOptions = Self.autoPowerOffShortOptions
         autoPowerOffItem.isHidden = !model.hasAutoPowerOff
         autoPowerOffItem.isEnabled = connected
         autoPowerOffItem.attributedTitle = titleWithValue(
-            tr("Auto Power-Off"), options.indices.contains(model.autoPowerOff) ? options[model.autoPowerOff] : "")
+            tr("Auto Power-Off"),
+            shortOptions.indices.contains(model.autoPowerOff) ? shortOptions[model.autoPowerOff] : "")
         for (index, item) in autoPowerOffItems.enumerated() {
             item.state = index == model.autoPowerOff ? .on : .off
         }

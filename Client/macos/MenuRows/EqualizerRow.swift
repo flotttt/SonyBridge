@@ -23,8 +23,10 @@ struct EqualizerRow: View {
                 }
             }
         }
-        .padding(.horizontal, MenuMetrics.leading)
+        .padding(.leading, MenuMetrics.leading)
+        .padding(.trailing, MenuMetrics.trailing)
         .padding(.vertical, 6)
+        .frame(height: MenuMetrics.equalizerHeight)
     }
 
     private func band(_ label: String, value: Int, onChange: @escaping (Int, Bool) -> Void) -> some View {

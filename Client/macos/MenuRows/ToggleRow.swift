@@ -18,7 +18,7 @@ struct ToggleRow: View {
                 .controlSize(.mini)
         }
         .padding(.leading, indent)
-        .padding(.trailing, MenuMetrics.leading)
+        .padding(.trailing, MenuMetrics.trailing)
         .padding(.vertical, 2)
         .disabled(!model.connected)
         .opacity(model.connected ? 1 : 0.5)
