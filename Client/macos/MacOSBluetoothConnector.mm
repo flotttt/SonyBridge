@@ -6,10 +6,7 @@ MacOSBluetoothConnector::MacOSBluetoothConnector()
 }
 MacOSBluetoothConnector::~MacOSBluetoothConnector()
 {
-    // onclose event
-    if (isConnected()){
-        disconnect();
-    }
+    disconnect();
 }
 
 @interface AsyncCommDelegate : NSObject <IOBluetoothRFCOMMChannelDelegate> {
@@ -24,7 +21,7 @@ MacOSBluetoothConnector::~MacOSBluetoothConnector()
 #ifdef SHC_DEBUG_PROTOCOL
     fprintf(stderr, "[connect] rfcommChannelClosed\n");
 #endif
-    delegateCPP->disconnect();
+    delegateCPP->markClosed();
 }
 
 #ifdef SHC_DEBUG_PROTOCOL
@@ -148,6 +145,8 @@ void MacOSBluetoothConnector::connectToMac(MacOSBluetoothConnector* macOSBluetoo
     lk.unlock();
 }
 void MacOSBluetoothConnector::connect(const std::string& addrStr){
+    // A previous link's thread has stopped (markClosed) but may not have been joined yet.
+    if (uthread.joinable()) uthread.join();
     // convert mac address to nsstring
     NSString *addressNSString = [NSString stringWithCString:addrStr.c_str() encoding:[NSString defaultCStringEncoding]];
     // get device based on mac address
@@ -223,17 +222,23 @@ std::vector<BluetoothDevice> MacOSBluetoothConnector::getConnectedDevices()
     return res;
 }
 
+void MacOSBluetoothConnector::markClosed() noexcept
+{
+    running = false;
+    disconnectionConditionVariable.notify_all();
+}
+
 void MacOSBluetoothConnector::disconnect() noexcept
 {
-    // close connection
     closeConnection();
-    running = false;
-    // notify the other thread that we are done disconnecting
-    disconnectionConditionVariable.notify_all();
-    // wait for the thread to finish
-    uthread.join();
+    markClosed();
+    // Never join from the connector thread itself (the channel-closed callback runs there).
+    if (uthread.joinable() && uthread.get_id() != std::this_thread::get_id()) {
+        uthread.join();
+    }
 }
 void MacOSBluetoothConnector::closeConnection() {
+    if (!rfcommchannel) return;
     // get the channel
     IOBluetoothRFCOMMChannel *chan = (__bridge IOBluetoothRFCOMMChannel*) rfcommchannel;
     [chan setDelegate: nil];

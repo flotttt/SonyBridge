@@ -54,6 +54,8 @@ public:
 	void setEqualizerCustom(int clearBass, const std::vector<int>& bands);
 	int getClearBass();
 	int getEqualizerBand(int index); // 0..4
+	int getEqualizerBandCount();   // 0 until read, then 5 (+ Clear Bass) or 10
+	bool equalizerHasClearBass();
 
 	// DSEE / audio upsampling (v2).
 	void requestDsee();
@@ -63,6 +65,9 @@ public:
 	// Reads the device's current ambient/NC state into the *current* properties (for live polling so
 	// changes made with the headphone's own button are reflected in the app).
 	void requestAmbientState();
+
+	// Picks the NC/ASM inquiry channel: 0x19 when the device answers it (WH-1000XM6), else the legacy 0x17.
+	void probeNcAsmInquiryType();
 
 	// Optional features. probeCapabilities() sends each GET on connect; a feature is "supported" only if
 	// the device answers (otherwise we must never send its SET - see the WH-1000XM4 power-off incident).
@@ -97,11 +102,17 @@ private:
 	int _batteryLevel = -1;
 	bool _batteryCharging = false;
 	bool _hasDualBattery = false;
+	// Set once GET 22 00 succeeds. Guards requestBattery() against a later transient timeout on 22 00
+	// falling through to the TWS probes (22 09/22 0a), which would wrongly flip _hasDualBattery to true
+	// and never reset it - see requestBattery().
+	bool _singleBatteryKnown = false;
 	int _batteryLeft = -1;
 	int _batteryRight = -1;
 	int _batteryCase = -1;
 	EQ_PRESET _eqPreset = EQ_PRESET::OFF;
-	std::vector<int> _eqBands = { 0, 0, 0, 0, 0 };
+	std::vector<int> _eqBands;              // empty until the first read; 5 or 10 values
+	bool _eqHasClearBass = false;
+	unsigned char _ncAsmInquiryType = 0x17; // 0x19 on the WH-1000XM6, see probeNcAsmInquiryType()
 	int _eqClearBass = 0;
 	bool _dsee = false;
 
