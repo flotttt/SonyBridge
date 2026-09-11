@@ -8,9 +8,14 @@ all: build
 build:
 	DEBUG_PROTOCOL=$(DEBUG) ./scripts/build.sh
 
+LOG_FILE := $(HOME)/Library/Logs/SonyBridge/app.log
+
 run: build
-	-pkill -x SonyBridge
-	open --stdout build/app.log --stderr build/app.log build/SonyBridge.app
+	-pkill -x SonyBridge; while pgrep -x SonyBridge >/dev/null; do sleep 0.2; done
+	@mkdir -p "$(dir $(LOG_FILE))"
+	@ln -sfn "$(LOG_FILE)" "$(CURDIR)/build/app.log"
+	@echo "=== SonyBridge session $$(date '+%Y-%m-%d %H:%M:%S') ===" >> "$(LOG_FILE)"
+	open "$(CURDIR)/build/SonyBridge.app" --args -SonyBridgeLogFile "$(LOG_FILE)"
 
 test:
 	./scripts/test.sh
